@@ -13,7 +13,7 @@ mkdir -p $BUILD_DIR/package/usr/bin/
 
 	( cd iar/
 		# we actually need to install this completely on our system in order to link the 'libiar' shared library
-		sh build.sh
+		sh build.sh _
 	)
 
 	# move built files to their appropriate place in the package
