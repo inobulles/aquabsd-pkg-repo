@@ -6,11 +6,7 @@ compute_engine_instance:
   memory: 4G
 
 task:
-  matrix:
-  - name: Test all packages in the PKG repository build
-    env:
-      TARGET: amd64
-      TARGET_ARCH: amd64
+  name: Test all packages in the PKG repository build
   timeout_in: 30m
   packages_artifacts:
     path: ".build/*"
@@ -23,4 +19,5 @@ task:
   script:
   - sh build.sh
   post_script:
+  - ls -la .build/
   - df -h
