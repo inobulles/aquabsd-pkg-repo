@@ -1,0 +1,24 @@
+compute_engine_instance:
+  platform: freebsd
+  image_project: freebsd-org-cloud-dev
+  image: freebsd-13-0-release-amd64
+  cpu: 8
+  memory: 4G
+
+task:
+  matrix:
+  - name: Test all packages in the PKG repository build
+    env:
+      TARGET: amd64
+      TARGET_ARCH: amd64
+  timeout_in: 30m
+  install_script:
+  - pkg install pkgconf pango librsvg2 icu
+  setup_script: # copying the FreeBSD Cirrus CI 'setup_script'
+  - uname -a
+  - df -h
+  - pkg --version
+  script:
+  - sh build.sh
+  post_script:
+  - df -h
