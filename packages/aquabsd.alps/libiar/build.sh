@@ -4,7 +4,7 @@ set -e
 BUILD_DIR=".build/"
 
 rm -rf $BUILD_DIR
-mkdir -p $BUILD_DIR/package/usr/lib/
+mkdir -p $BUILD_DIR/package/usr/
 
 ( cd $BUILD_DIR
 	# build the package files
@@ -16,10 +16,16 @@ mkdir -p $BUILD_DIR/package/usr/lib/
 		sh build.sh
 	)
 
+	# create package directories
+
+	mkdir package/usr/lib/
+	mkdir package/usr/include/
+
 	# move built files to their appropriate place in the package
 
 	mv iar/bin/libiar.a package/usr/lib/libiar.a
 	mv iar/bin/libiar.so package/usr/lib/libiar.so
+	mv iar/src/iar.h package/usr/include/iar.h
 )
 
 # create the package tarball

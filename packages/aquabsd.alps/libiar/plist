@@ -1,2 +1,3 @@
 lib/libiar.a
 lib/libiar.so
+include/iar.h
