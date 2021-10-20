@@ -1,6 +1,6 @@
 {
-	"name": "iar",
-	"origin": "aquabsd.alps/iar",
+	"name": "libiar",
+	"origin": "aquabsd.alps/libiar",
 	"version": "1021a",
 	"comment": "Library for managing IAR (Inobulles ARchive) files",
 	"maintainer": "obiwac@gmail.com",

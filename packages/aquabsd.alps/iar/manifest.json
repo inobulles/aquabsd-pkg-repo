@@ -12,7 +12,7 @@
 		"aquabsd.alps"
 	],
 	"deps": {
-		"iar": {
+		"libiar": {
 			"version": "1021a",
 			"origin": "aquabsd.alps/libiar"
 		}
