@@ -8,8 +8,6 @@ compute_engine_instance:
 task:
   name: Test all packages in the PKG repository build
   timeout_in: 30m
-  packages_artifacts:
-    path: ".build/*"
   install_script:
   - pkg install -y pkgconf pango librsvg2 icu git-lite libxcb xcb-util xcb-util-wm xcb-util-image xcb 
   setup_script: # copying the FreeBSD Cirrus CI 'setup_script'
@@ -21,3 +19,5 @@ task:
   post_script:
   - ls -la .build/
   - df -h
+  packages_artifacts:
+    path: ".build/*"
