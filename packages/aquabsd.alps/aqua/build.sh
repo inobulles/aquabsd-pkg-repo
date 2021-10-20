@@ -12,7 +12,7 @@ mkdir -p $BUILD_DIR/package/usr/
 	git clone https://github.com/inobulles/aqua-unix --branch main --depth 1
 	
 	( cd aqua-unix/
-		sh build.sh --kos --devices --devbranch aquabsd.alps
+		sh build.sh --auto-iar --kos --devices --devbranch aquabsd.alps
 	)
 	
 	# create package directories
