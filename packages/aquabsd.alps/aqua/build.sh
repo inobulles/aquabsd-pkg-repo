@@ -20,7 +20,7 @@ mkdir -p $BUILD_DIR/package/usr/
 	mkdir package/usr/bin/
 	mkdir -p package/usr/share/aqua/devices/
 
-	# move built files to their appropriate places in the package
+	# move built files to their appropriate place in the package
 
 	mv aqua-unix/bin/kos package/usr/bin/aqua
 	mv aqua-unix/bin/devices/* package/usr/share/aqua/devices/
