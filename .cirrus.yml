@@ -13,7 +13,7 @@ task:
       TARGET_ARCH: amd64
   timeout_in: 30m
   install_script:
-  - pkg install pkgconf pango librsvg2 icu
+  - pkg install -y pkgconf pango librsvg2 icu
   setup_script: # copying the FreeBSD Cirrus CI 'setup_script'
   - uname -a
   - df -h
