@@ -1,0 +1,14 @@
+{
+	"name": "iar",
+	"origin": "aquabsd.alps/iar",
+	"version": "1021a",
+	"comment": "Library for managing IAR (Inobulles ARchive) files",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/iar",
+	"desc": "IAR (Inobulles ARchive) is a very lightweight and speedy archive file format which uses the `.iar` file extension.\nThis is a library (both shared and static) application can use to aid in packing and unpacking these IAR files.\nFuller documentation can be found in the IAR GitHub repository's `README.md` file.\n\nWWW: https://github.com/inobulles/iar",
+	"arch": "amd64",
+	"prefix": "/usr/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}
