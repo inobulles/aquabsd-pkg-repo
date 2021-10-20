@@ -14,7 +14,7 @@
 	"deps": {
 		"iar": {
 			"version": "1021a",
-			"origin": "aquabsd.alps/iar"
+			"origin": "aquabsd.alps/libiar"
 		}
 	}
 }
