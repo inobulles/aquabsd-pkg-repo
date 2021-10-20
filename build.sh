@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+BUILD_DIR=".build/"
+
+rm -rf $BUILD_DIR
+mkdir $BUILD_DIR
+
+BUILD_DIR=$(realpath $BUILD_DIR)
+
 # build all packages
 
 ( cd packages/
@@ -13,6 +20,7 @@ set -e
 				
 				( cd $package
 					sh build.sh
+					mv *.pkg $BUILD_DIR
 				)
 			done
 		) 
