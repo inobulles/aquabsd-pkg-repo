@@ -69,18 +69,15 @@ int copyfile_state_set(copyfile_state_t s, uint32_t flag, const void * src);
 #define COPYFILE_STATE_SRC_FILENAME	2
 #define COPYFILE_STATE_DST_FD		3
 #define COPYFILE_STATE_DST_FILENAME	4
-#define COPYFILE_STATE_QUARANTINE	5
 
 #define	COPYFILE_DISABLE_VAR	"COPYFILE_DISABLE"
 
 /* flags for copyfile */
 
-#define COPYFILE_ACL	    (1<<0)
 #define COPYFILE_STAT	    (1<<1)
 #define COPYFILE_XATTR	    (1<<2)
 #define COPYFILE_DATA	    (1<<3)
 
-#define COPYFILE_SECURITY   (COPYFILE_STAT | COPYFILE_ACL)
 #define COPYFILE_METADATA   (COPYFILE_SECURITY | COPYFILE_XATTR)
 #define COPYFILE_ALL	    (COPYFILE_METADATA | COPYFILE_DATA)
 
@@ -91,9 +88,6 @@ int copyfile_state_set(copyfile_state_t s, uint32_t flag, const void * src);
 #define COPYFILE_MOVE		(1<<20) /* unlink src after copy */
 #define COPYFILE_UNLINK		(1<<21) /* unlink dst before copy */
 #define COPYFILE_NOFOLLOW	(COPYFILE_NOFOLLOW_SRC | COPYFILE_NOFOLLOW_DST)
-
-#define COPYFILE_PACK		(1<<22)
-#define COPYFILE_UNPACK		(1<<23)
 
 #define COPYFILE_VERBOSE	(1<<30)
 
