@@ -1,0 +1,3 @@
+lib/libmkfs_msdos.a
+lib/libmkfs_msdos.so
+include/mkfs_msdos.h
