@@ -78,7 +78,7 @@ int copyfile_state_set(copyfile_state_t s, uint32_t flag, const void * src);
 #define COPYFILE_XATTR	    (1<<2)
 #define COPYFILE_DATA	    (1<<3)
 
-#define COPYFILE_METADATA   (COPYFILE_SECURITY | COPYFILE_XATTR)
+#define COPYFILE_METADATA   (COPYFILE_XATTR)
 #define COPYFILE_ALL	    (COPYFILE_METADATA | COPYFILE_DATA)
 
 #define COPYFILE_CHECK		(1<<16) /* return flags for xattr or acls if set */
