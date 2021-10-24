@@ -1,0 +1,14 @@
+{
+	"name": "libcopyfile",
+	"origin": "aquabsd.alps/libcopyfile",
+	"version": "1021a",
+	"comment": "Library for copying files",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://opensource.apple.com/source/copyfile",
+	"desc": "This library comes from the equivalently named 'copyfile' library found on Apple's operating systems.\nA manpage is coming soon!\nThis library will probably be integrated into base at some point.\n\n\nWWW: https://opensource.apple.com/source/copyfile",
+	"arch": "amd64",
+	"prefix": "/usr/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}

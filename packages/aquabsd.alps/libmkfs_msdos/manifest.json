@@ -4,8 +4,8 @@
 	"version": "1021a",
 	"comment": "Library for creating MS-DOS filesystems",
 	"maintainer": "obiwac@gmail.com",
-	"www": "https://github.com/inobulles/iar",
-	"desc": "This library comes from the `newfs_msdos` utility, which is installed by default in the aquaBSD core base. You can find it at `sbin/newfs_msdos/mkfs_msdos.*`.\nA manpage is coming soon!\nThis library will probably be integrated into base at some point.\n\nWWW: https://github.com/inobulles/iar",
+	"www": "https://github.com/inobulles/aquabsd-core/tree/main/sbin/newfs_msdos",
+	"desc": "This library comes from the `newfs_msdos` utility, which is installed by default in the aquaBSD core base. You can find it at `sbin/newfs_msdos/mkfs_msdos.*`.\nA manpage is coming soon!\nThis library will probably be integrated into base at some point.\n\nWWW: https://github.com/inobulles/aquabsd-core/tree/main/sbin/newfs_msdos",
 	"arch": "amd64",
 	"prefix": "/usr/",
 	"categories": [
