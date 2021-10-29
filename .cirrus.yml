@@ -9,7 +9,7 @@ task:
   name: Test all packages in the PKG repository build
   timeout_in: 30m
   install_script:
-  - pkg install -y pkgconf pango librsvg2 icu git-lite libxcb xcb-util xcb-util-wm xcb-util-image xcb
+  - pkg install -y pkgconf pango librsvg2 icu git-lite libxcb xcb-util xcb-util-wm xcb-util-image xcb libX11 mesa-libs glew libXcomposite libXfixes libXinerama
   setup_script: # copying the FreeBSD Cirrus CI 'setup_script'
   - uname -a
   - df -h
