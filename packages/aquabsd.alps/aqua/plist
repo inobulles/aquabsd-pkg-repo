@@ -1,5 +1,6 @@
 bin/aqua
 share/aqua/devices/aquabsd.alps.font.device
+share/aqua/devices/aquabsd.alps.kbd.device
 share/aqua/devices/aquabsd.alps.mouse.device
 share/aqua/devices/aquabsd.alps.svg.device
 share/aqua/devices/aquabsd.alps.ui.device
