@@ -4,5 +4,5 @@ The general idea is very similar to the ports system and `poudriere(8)` on FreeB
 Individual packages can be built by running the `build.sh` script in each directory, and the resulting package can be installed as so:
 
 ```sh
-# pkg add package.pkg
+# pkg install package.pkg
 ```
