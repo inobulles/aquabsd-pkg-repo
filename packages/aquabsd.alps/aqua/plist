@@ -2,8 +2,14 @@ bin/aqua
 share/aqua/devices/aquabsd.alps.font.device
 share/aqua/devices/aquabsd.alps.kbd.device
 share/aqua/devices/aquabsd.alps.mouse.device
+share/aqua/devices/aquabsd.alps.net.device
+share/aqua/devices/aquabsd.alps.png.device
+share/aqua/devices/aquabsd.alps.ogl.device
 share/aqua/devices/aquabsd.alps.svg.device
 share/aqua/devices/aquabsd.alps.ui.device
 share/aqua/devices/aquabsd.alps.vga.device
+share/aqua/devices/aquabsd.alps.win.device
+share/aqua/devices/aquabsd.alps.wm.device
 share/aqua/devices/core.time.device
 share/aqua/devices/core.math.device
+share/aqua/devices/core.pkg.device
