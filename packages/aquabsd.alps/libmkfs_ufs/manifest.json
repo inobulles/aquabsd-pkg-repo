@@ -1,0 +1,14 @@
+{
+	"name": "libmkfs_ufs",
+	"origin": "aquabsd.alps/libmkfs_ufs",
+	"version": "0122a",
+	"comment": "Library for creating UFS1/2 filesystems",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-core/tree/main/sbin/newfs_ufs",
+	"desc": "This library comes from the `newfs` utility, which is installed by default in the aquaBSD core base. You can find it at `sbin/newfs/mkfs.c`.\nA manpage is coming soon!\nThis library will probably be integrated into base at some point.\n\nWWW: https://github.com/inobulles/aquabsd-core/tree/main/sbin/newfs",
+	"arch": "amd64",
+	"prefix": "/usr/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}
