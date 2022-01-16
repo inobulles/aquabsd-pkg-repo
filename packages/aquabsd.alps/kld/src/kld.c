@@ -3,6 +3,10 @@
 //  - aquabsd-core/sbin/kldload/kldload.c
 //  - aquabsd-core/sbin/kldunload/kldunload.c
 
+// TODO
+//  - analog to kldstat's showdata option
+//  - implement kldconfig's functionality 
+
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
@@ -69,8 +73,6 @@ static void print_mod(opts_t* opts, int id) {
 		warn("can't stat module id %d", id);
 		return;
 	}
-
-	// TODO analog to showdata option
 
 	printf("%3d %s\n", stat.id, stat.name);
 }
