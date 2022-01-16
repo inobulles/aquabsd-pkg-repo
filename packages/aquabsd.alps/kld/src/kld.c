@@ -1,19 +1,27 @@
-// heavily based off of aquabsd-core/sbin/kldstat/kldstat.c
+// heavily based off of:
+//  - aquabsd-core/sbin/kldstat/kldstat.c
+//  - aquabsd-core/sbin/kldstat/kldload.c
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
 #include <err.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <libutil.h>
 
 #include <sys/param.h> // TODO sys/linker.h not including all the stuff it needs
+#include <sys/stat.h>
 
-#include <sys/module.h>
 #include <sys/linker.h>
+#include <sys/module.h>
+#include <sys/sysctl.h>
+
+#define PATHCTL "kern.module_path"
 
 static void __dead2 usage(void) {
 	fprintf(stderr,
@@ -114,6 +122,15 @@ static inline int __do_list_files(opts_t* opts) {
 }
 
 static int do_stat(opts_t* opts) {
+	if (opts->file) {
+		opts->id = kldfind(opts->file);
+
+		if (opts->id < 0) {
+			warnx("can't find file %s", opts->file);
+			return -1;
+		}
+	}
+
 	if (opts->id > -1) {
 		return __do_list_mods(opts);
 	}
@@ -123,6 +140,119 @@ static int do_stat(opts_t* opts) {
 	}
 
 	return __do_list_files(opts);
+}
+
+static int do_load(opts_t* opts) {
+	char* name = opts->file;
+
+	// check path
+
+	if (strchr(name, '/')) {
+		goto path_validated;
+	}
+
+	if (!strstr(name, ".ko")) {
+		goto path_validated;
+	}
+
+	struct stat stat_;
+
+	if (stat(name, &stat_) < 0) {
+		goto path_validated;
+	}
+
+	// for later
+
+	dev_t dev = stat_.st_dev;
+	ino_t ino = stat_.st_ino;
+
+	// process $PATHCTL sysctl
+
+	int mib[5];
+	size_t mib_len = nitems(mib);
+
+	if (sysctlnametomib(PATHCTL, mib, &mib_len) < 0) {
+		err(1, "sysctlnametomib(%s)", PATHCTL);
+	}
+
+	size_t path_len;
+
+	if (sysctl(mib, mib_len, NULL, &path_len, NULL, 0) < 0) {
+		err(1, "getting path: sysctl(%s) - size only", PATHCTL);
+	}
+
+	char* path = malloc(path_len + 1);
+
+	if (sysctl(mib, mib_len, path, &path_len, NULL, 0) < 0) {
+		err(1, "getting path: sysctl(%s)", PATHCTL);
+	}
+
+	char* tmp = path;
+	int found = 0;
+
+	char* elem;
+
+	while ((elem = strsep(&tmp, ";"))) {
+		char kld_path[strlen(elem) + 1];
+		strlcpy(kld_path, elem, sizeof kld_path);
+
+		// add slash if there isn't one already
+
+		if (kld_path[strlen(kld_path) - 1] != '/') {
+			strlcat(kld_path, "/", sizeof kld_path);
+		}
+
+		strlcat(kld_path, name, sizeof kld_path);
+
+		if (stat(kld_path, &stat_) < 0) {
+			continue;
+		}
+
+		found = 1;
+
+		if (stat_.st_dev != dev || stat_.st_ino != ino) {
+			warnx("%s will be loaded from %s, not the current directory", name, elem);
+		}
+
+		break;
+	}
+
+	free(path);
+
+	if (!found) {
+		warnx("%s is not in the module path", name);
+		return -1;
+	}
+
+path_validated: {} // I still don't understand why labels can't have a declaration after them 😄
+
+	// all good, actually load the file
+
+	int id = kldload(name);
+
+	if (id > -1) {
+		if (opts->verbose) {
+			printf("Loaded %s, id=%d\n", name, id);
+		}
+
+		return 0;
+	}
+
+	// something went wrong
+
+	if (errno == EEXIST) {
+		warnx("can't load %s: module already loaded or in kernel\n", name);
+	}
+
+	else if (errno == ENOEXEC) {
+		warnx("an error occurred while loading %s; please check dmesg(8) for more details", name);
+	}
+
+	else {
+		warn("can't load %s", name);
+	}
+
+	return -1;
 }
 
 typedef enum {
@@ -197,16 +327,6 @@ int main(int argc, char* argv[]) {
 	argc -= optind;
 	argv += optind;
 
-	// compute options
-
-	if (opts.file) {
-		opts.id = kldfind(opts.file);
-
-		if (opts.id < 0) {
-			err(1, "can't find file %s", opts.file);
-		}
-	}
-
 	// take action
 
 	int rv = 0; // success
@@ -215,11 +335,11 @@ int main(int argc, char* argv[]) {
 		rv = do_stat(&opts);
 	}
 
-	// if (action == ACTION_LOAD) {
-	// 	rv = do_load();
-	// }
+	else if (action == ACTION_LOAD) {
+		rv = do_load(&opts);
+	}
 
-	// if (action == ACTION_UNLOAD) {
+	// else if (action == ACTION_UNLOAD) {
 	// 	rv = do_unload();
 	// }
 
