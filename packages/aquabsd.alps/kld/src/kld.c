@@ -315,6 +315,7 @@ int main(int argc, char* argv[]) {
 	opts_t opts = {
 		.verbose = 0,
 		.humanize = 0,
+		.force = 0,
 
 		.id = -1,
 		.file = NULL,
@@ -325,7 +326,7 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "hi:f:lm:uv")) != -1) {
+	while ((c = getopt(argc, argv, "fhi:lm:n:uv")) != -1) {
 		// general options
 		
 		if (c == 'h') {
@@ -334,6 +335,10 @@ int main(int argc, char* argv[]) {
 
 		else if (c == 'v') {
 			opts.verbose = 1;
+		}
+
+		else if (c == 'f') {
+			opts.force = 1;
 		}
 
 		// action options
@@ -357,7 +362,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		else if (c == 'f') {
+		else if (c == 'n') {
 			opts.file = optarg;
 		}
 
