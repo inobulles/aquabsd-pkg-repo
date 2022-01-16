@@ -113,7 +113,7 @@ static inline int __do_list_files(opts_t* opts) {
 	return 0;
 }
 
-static int do_list(opts_t* opts) {
+static int do_stat(opts_t* opts) {
 	if (opts->id > -1) {
 		return __do_list_mods(opts);
 	}
@@ -126,7 +126,7 @@ static int do_list(opts_t* opts) {
 }
 
 typedef enum {
-	ACTION_LIST,
+	ACTION_STAT,
 	ACTION_LOAD,
 	ACTION_UNLOAD
 } action_t;
@@ -134,7 +134,7 @@ typedef enum {
 int main(int argc, char* argv[]) {
 	// options
 
-	action_t action = ACTION_LIST;
+	action_t action = ACTION_STAT;
 	
 	opts_t opts = {
 		.verbose = 0,
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "hi:f:lm:suv")) != -1) {
+	while ((c = getopt(argc, argv, "hi:f:lm:uv")) != -1) {
 		// general options
 		
 		if (c == 'h') {
@@ -165,12 +165,6 @@ int main(int argc, char* argv[]) {
 		else if (c == 'l') {
 			action = ACTION_LOAD;
 		}
-
-		// TODO ?
-
-		// else if (c == 's') {
-		// 	action = ACTION_STAT;
-		// }
 
 		else if (c == 'u') {
 			action = ACTION_UNLOAD;
@@ -217,13 +211,9 @@ int main(int argc, char* argv[]) {
 
 	int rv = 0; // success
 
-	if (action == ACTION_LIST) {
-		rv = do_list(&opts);
+	if (action == ACTION_STAT) {
+		rv = do_stat(&opts);
 	}
-
-	// if (action == ACTION_STAT) {
-	// 	rv = do_stat();
-	// }
 
 	// if (action == ACTION_LOAD) {
 	// 	rv = do_load();
