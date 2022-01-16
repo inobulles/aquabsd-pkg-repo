@@ -157,6 +157,10 @@ static int do_stat(opts_t* opts) {
 static int do_load(opts_t* opts) {
 	char* name = opts->file;
 
+	if (!name) {
+		usage();
+	}
+
 	// check path
 
 	if (strchr(name, '/')) {
