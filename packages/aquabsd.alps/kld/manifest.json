@@ -1,0 +1,15 @@
+{
+	"name": "kld",
+	"origin": "aquabsd.alps/kld",
+	"version": "0122a",
+	"comment": "Command-line utility for interacting with the kernel linker",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-core",
+	"desc": "This utility is meant to combine the kld* family of commands (kldload, kldstat, kldunload, &c) into a single command to interact with the kernel linker (list available/loaded kernel modules, load them, &c).\n\nWWW: https://github.com/inobulles/aquabsd-core",
+	"arch": "amd64",
+	"prefix": "/",
+	"categories": [
+		"aquabsd.alps"
+	],
+	"deps": {}
+}
