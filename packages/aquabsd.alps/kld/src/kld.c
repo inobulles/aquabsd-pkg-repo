@@ -1,6 +1,7 @@
 // heavily based off of:
 //  - aquabsd-core/sbin/kldstat/kldstat.c
-//  - aquabsd-core/sbin/kldstat/kldload.c
+//  - aquabsd-core/sbin/kldload/kldload.c
+//  - aquabsd-core/sbin/kldunload/kldunload.c
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
@@ -35,11 +36,27 @@ static void __dead2 usage(void) {
 typedef struct {
 	int verbose;
 	int humanize;
+	int force;
 
 	int id;
 	char* file;
 	char* mod;
 } opts_t;
+
+static int compute_id(opts_t* opts) {
+	if (!opts->file) {
+		return 0;
+	}
+
+	opts->id = kldfind(opts->file);
+
+	if (opts->id < 0) {
+		warnx("can't find file %s", opts->file);
+		return -1;
+	}
+
+	return 0;
+}
 
 #define PTR_WIDTH ((int) (sizeof(void*) * 2 + 2))
 
@@ -64,7 +81,7 @@ static void print_file(opts_t* opts, int id) {
 	};
 
 	if (kldstat(id, &stat) < 0) {
-		err(1, "can't stat file id %d", id);
+		err(EXIT_FAILURE, "can't stat file id %d", id);
 	}
 
 	if (opts->humanize) {
@@ -122,13 +139,8 @@ static inline int __do_list_files(opts_t* opts) {
 }
 
 static int do_stat(opts_t* opts) {
-	if (opts->file) {
-		opts->id = kldfind(opts->file);
-
-		if (opts->id < 0) {
-			warnx("can't find file %s", opts->file);
-			return -1;
-		}
+	if (compute_id(opts) < 0) {
+		return -1;
 	}
 
 	if (opts->id > -1) {
@@ -172,19 +184,19 @@ static int do_load(opts_t* opts) {
 	size_t mib_len = nitems(mib);
 
 	if (sysctlnametomib(PATHCTL, mib, &mib_len) < 0) {
-		err(1, "sysctlnametomib(%s)", PATHCTL);
+		err(EXIT_FAILURE, "sysctlnametomib(%s)", PATHCTL);
 	}
 
 	size_t path_len;
 
 	if (sysctl(mib, mib_len, NULL, &path_len, NULL, 0) < 0) {
-		err(1, "getting path: sysctl(%s) - size only", PATHCTL);
+		err(EXIT_FAILURE, "getting path: sysctl(%s) - size only", PATHCTL);
 	}
 
 	char* path = malloc(path_len + 1);
 
 	if (sysctl(mib, mib_len, path, &path_len, NULL, 0) < 0) {
-		err(1, "getting path: sysctl(%s)", PATHCTL);
+		err(EXIT_FAILURE, "getting path: sysctl(%s)", PATHCTL);
 	}
 
 	char* tmp = path;
@@ -253,6 +265,40 @@ path_validated: {} // I still don't understand why labels can't have a declarati
 	}
 
 	return -1;
+}
+
+static int do_unload(opts_t* opts) {
+	if (compute_id(opts) < 0) {
+		return -1;
+	}
+
+	if (opts->id < 0) {
+		usage();
+	}
+
+	if (opts->verbose) {
+		struct kld_file_stat stat = {
+			.version = sizeof stat,
+		};
+
+		if (kldstat(opts->id, &stat) < 0) {
+			warnx("can't stat file id %d", opts->id);
+			return -1;
+		}
+
+		printf("Unloading %s, id=%d\n", stat.name, opts->id);
+	}
+
+	int force = opts->force ?
+		LINKER_UNLOAD_FORCE :
+		LINKER_UNLOAD_NORMAL;
+
+	if (kldunloadf(opts->id, force) < 0) {
+		warnx("can't unload file id %d", opts->id);
+		return -1;
+	}
+
+	return 0;
 }
 
 typedef enum {
@@ -339,9 +385,9 @@ int main(int argc, char* argv[]) {
 		rv = do_load(&opts);
 	}
 
-	// else if (action == ACTION_UNLOAD) {
-	// 	rv = do_unload();
-	// }
+	else if (action == ACTION_UNLOAD) {
+		rv = do_unload(&opts);
+	}
 
-	return rv < 0 ? 1 : 0;
+	return rv < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
