@@ -27,7 +27,10 @@ static void __dead2 usage(void) {
 typedef struct {
 	int verbose;
 	int humanize;
-	char* filename;
+
+	int id;
+	char* file;
+	char* mod;
 } opts_t;
 
 #define PTR_WIDTH ((int) (sizeof(void*) * 2 + 2))
@@ -44,7 +47,7 @@ static void print_mod(opts_t* opts, int id) {
 
 	// TODO analog to showdata option
 
-	printf("\t%3d %s\n", stat.id, stat.name);
+	printf("%3d %s\n", stat.id, stat.name);
 }
 
 static void print_file(opts_t* opts, int id) {
@@ -68,14 +71,7 @@ static void print_file(opts_t* opts, int id) {
 	}
 
 	if (opts->verbose) {
-		// print out what that module contains
-
 		printf(" (%s)\n", stat.pathname);
-		printf("\t id name\n");
-
-		for (int mod = kldfirstmod(id); mod; mod = modfnext(mod)) {
-			print_mod(opts, mod);
-		}
 	}
 
 	else {
@@ -83,7 +79,31 @@ static void print_file(opts_t* opts, int id) {
 	}
 }
 
-static int do_list(opts_t* opts) {
+static inline int __do_list_mods(opts_t* opts) {
+	int file_id = -1;
+
+	if (opts->id > -1) {
+		file_id = opts->id;
+	}
+
+	else if (opts->file) {
+		file_id = kldfind(opts->file);
+	}
+
+	if (file_id < 0) {
+		return -1;
+	}
+	
+	printf(" id name\n");
+
+	for (int mod = kldfirstmod(file_id); mod; mod = modfnext(mod)) {
+		print_mod(opts, mod);
+	}
+
+	return 0;
+}
+
+static inline int __do_list_files(opts_t* opts) {
 	char* fmt = opts->humanize ?
 		"id refs addr%*c %8s name\n" :
 		"id refs addr%*c %11s name\n";
@@ -97,9 +117,20 @@ static int do_list(opts_t* opts) {
 	return 0;
 }
 
+static int do_list(opts_t* opts) {
+	if (opts->file || opts->id > -1) {
+		return __do_list_mods(opts);
+	}
+
+	if (opts->mod) {
+		usage();
+	}
+
+	return __do_list_files(opts);
+}
+
 typedef enum {
 	ACTION_LIST,
-	ACTION_STAT,
 	ACTION_LOAD,
 	ACTION_UNLOAD
 } action_t;
@@ -112,34 +143,60 @@ int main(int argc, char* argv[]) {
 	opts_t opts = {
 		.verbose = 0,
 		.humanize = 0,
-		.filename = NULL,
+
+		.id = -1,
+		.file = NULL,
+		.mod = NULL,
 	};
 
 	// get options
 
 	int c;
 
-	while ((c = getopt(argc, argv, "hf:l:su:v")) != -1) {
+	while ((c = getopt(argc, argv, "hi:f:lm:suv")) != -1) {
+		// general options
+		
 		if (c == 'h') {
 			opts.humanize = 1;
 		}
 
-		else if (c == 'l') {
-			action = ACTION_LOAD;
-			opts.filename = optarg;
+		else if (c == 'v') {
+			opts.verbose = 1;
 		}
 
-		else if (c == 's') {
-			action = ACTION_STAT;
+		// action options
+
+		else if (c == 'l') {
+			action = ACTION_LOAD;
 		}
+
+		// TODO ?
+
+		// else if (c == 's') {
+		// 	action = ACTION_STAT;
+		// }
 
 		else if (c == 'u') {
 			action = ACTION_UNLOAD;
-			opts.filename = optarg;
 		}
 
-		else if (c == 'v') {
-			opts.verbose = 1;
+		// id/filename/modulename-passing options
+
+		else if (c == 'i') {
+			char* inval;
+			opts.id = strtoul(optarg, &inval, 10);
+
+			if (*inval) {
+				usage();
+			}
+		}
+
+		else if (c == 'f') {
+			opts.file = optarg;
+		}
+
+		else if (c == 'm') {
+			opts.mod = optarg;
 		}
 
 		else {
@@ -152,21 +209,23 @@ int main(int argc, char* argv[]) {
 
 	// take action
 
+	int rv = 0; // success
+
 	if (action == ACTION_LIST) {
-		return do_list(&opts);
+		rv = do_list(&opts);
 	}
 
 	// if (action == ACTION_STAT) {
-	// 	return do_stat();
+	// 	rv = do_stat();
 	// }
 
 	// if (action == ACTION_LOAD) {
-	// 	return do_load();
+	// 	rv = do_load();
 	// }
 
 	// if (action == ACTION_UNLOAD) {
-	// 	return do_unload();
+	// 	rv = do_unload();
 	// }
 
-	return 1;
+	return rv < 0 ? 1 : 0;
 }
