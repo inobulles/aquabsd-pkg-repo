@@ -86,14 +86,10 @@ static inline int __do_list_mods(opts_t* opts) {
 		file_id = opts->id;
 	}
 
-	else if (opts->file) {
-		file_id = kldfind(opts->file);
-	}
-
 	if (file_id < 0) {
 		return -1;
 	}
-	
+
 	printf(" id name\n");
 
 	for (int mod = kldfirstmod(file_id); mod; mod = modfnext(mod)) {
@@ -118,7 +114,7 @@ static inline int __do_list_files(opts_t* opts) {
 }
 
 static int do_list(opts_t* opts) {
-	if (opts->file || opts->id > -1) {
+	if (opts->id > -1) {
 		return __do_list_mods(opts);
 	}
 
@@ -206,6 +202,16 @@ int main(int argc, char* argv[]) {
 
 	argc -= optind;
 	argv += optind;
+
+	// compute options
+
+	if (opts.file) {
+		opts.id = kldfind(opts.file);
+
+		if (opts.id < 0) {
+			err(1, "can't find file %s", opts.file);
+		}
+	}
 
 	// take action
 
