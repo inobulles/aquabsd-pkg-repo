@@ -15,7 +15,7 @@ task:
   - df -h
   - pkg --version
   script:
-  - sh build.sh
+  - sh build.sh aquabsd.alps
   post_script:
   - ls -la .build/
   - df -h
