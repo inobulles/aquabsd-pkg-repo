@@ -2,3 +2,5 @@
 .build/
 *.sw[op]
 *.core
+work
+nv-codec-headers

@@ -30,8 +30,16 @@ while test $# -gt 0; do
 			echo -e "\tBuilding '$category/$package' ..."
 
 			( cd $package
-				sh build.sh
-				mv *.pkg $BUILD_DIR
+				if [ -f build.sh ]; then
+					sh build.sh
+					mv *.pkg $BUILD_DIR
+				elif [ -f Makefile ]; then
+					make clean
+					make package
+					mv work/pkg/*.pkg $BUILD_DIR
+				else
+					echo -e "\tDon't know how to build $package 😢"
+				fi
 			)
 		done
 	)
