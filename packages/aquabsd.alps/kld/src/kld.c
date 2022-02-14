@@ -1,17 +1,16 @@
+// for an alternative to the kldconfig command (i.e. to configure the kernel module search path), use the kern.module_path sysctl(8):
+// % sysctl kern.module_path
+
 // heavily based off of:
 //  - aquabsd-core/sbin/kldstat/kldstat.c
 //  - aquabsd-core/sbin/kldload/kldload.c
 //  - aquabsd-core/sbin/kldunload/kldunload.c
-//  - aquabsd-core/sbin/kldconfig/kldconfig.c
 
 // TODO
 //  - analog to kldstat's showdata option
-//  - implement kldconfig's functionality 
 //  - proper usage information
 //  - manual page
 //  - write proper tests (create mock modules?)
-//  - how necessary are the -U & -m options from kldconfig?
-//  - now that I think of it, I don't think the kldconfig stuff is very important here... you can just use 'sysctl kern.module_path'
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
@@ -26,7 +25,6 @@ __FBSDID("$FreeBSD$");
 #include <libutil.h>
 
 #include <sys/param.h> // TODO sys/linker.h not including all the stuff it needs
-#include <sys/queue.h>
 #include <sys/stat.h>
 
 #include <sys/linker.h>
@@ -34,14 +32,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysctl.h>
 
 #define PATHCTL "kern.module_path"
-
-TAILQ_HEAD(head_t, entry_t);
-typedef struct head_t head_t;
-
-typedef struct entry_t {
-	char* path;
-	TAILQ_ENTRY(entry_t) next;
-} entry_t;
 
 static void __dead2 usage(void) {
 	fprintf(stderr,
@@ -53,11 +43,8 @@ static void __dead2 usage(void) {
 }
 
 typedef struct {
-	int dry;
 	int humanize;
-	int insert;
 	int force;
-	int unique;
 	int verbose;
 
 	int id;
@@ -66,13 +53,6 @@ typedef struct {
 
 	// path stuff
 
-	char* mod_path;
-
-	char* prev_path;
-	int changed;
-	
-	head_t path_q;
-
 	size_t path_len;
 	char* path;
 
@@ -80,26 +60,7 @@ typedef struct {
 	int mib[5];
 } opts_t;
 
-static char* q_str(head_t* path_q) {
-	char* str = strdup("");
-
-	entry_t* entry;
-
-	TAILQ_FOREACH(entry, path_q, next) {
-		char* delim = TAILQ_NEXT(entry, next) ?
-			";" : "";
-
-		char* new;
-		asprintf(&new, "%s%s%s", str, entry->path, delim);
-
-		free(str);
-		str = new;
-	}
-
-	return str;
-}
-
-static void get_mib(opts_t* opts) {
+static inline void __get_mib(opts_t* opts) {
 	if (opts->mib_len) {
 		return;
 	}
@@ -111,12 +72,12 @@ static void get_mib(opts_t* opts) {
 	}
 }
 
-static void get_path(opts_t* opts) {
+static inline void __get_path(opts_t* opts) {
 	if (opts->path) {
 		free(opts->path);
 	}
 
-	get_mib(opts);
+	__get_mib(opts);
 
 	if (sysctl(opts->mib, opts->mib_len, NULL, &opts->path_len, NULL, 0) < 0) {
 		err(EXIT_FAILURE, "getting path: sysctl(%s) - size only", PATHCTL);
@@ -126,145 +87,6 @@ static void get_path(opts_t* opts) {
 
 	if (sysctl(opts->mib, opts->mib_len, opts->path, &opts->path_len, NULL, 0) < 0) {
 		err(EXIT_FAILURE, "getting path: sysctl(%s)", PATHCTL);
-	}
-}
-
-static void set_path(opts_t* opts) {
-	get_mib(opts);
-
-	char* new = q_str(&opts->path_q);
-	size_t len = strlen(new) + 1;
-
-	if (sysctl(opts->mib, opts->mib_len, NULL, NULL, new, len) < 0) {
-		err(EXIT_FAILURE, "setting path: sysctl(%s)", PATHCTL);
-	}
-
-	if (opts->path) {
-		free(opts->path);
-	}
-
-	opts->path = new;
-}
-
-static char* mod_path_buf(opts_t* opts, char* path) {
-	char* buf = realpath(path, NULL);
-	
-	// as explained in kldconfig.c:
-	// If the path exists, use it; otherwise, take the user-specified path at face value - may be a removed directory.
-
-	if (!buf) {
-		size_t bytes = strlen(path) + 1;
-
-		buf = malloc(bytes);
-		strncpy(buf, path, bytes - 1);
-	}
-
-	size_t len = strlen(buf);
-
-	// if present, remove terminated path delimiter
-
-	if (len > 0 && buf[len - 1] == '/') {
-		buf[--len] = '\0';
-	}
-
-	return buf;
-}
-
-static void __add_path(opts_t* opts, char* path, int force, int insert) {
-	char* buf = mod_path_buf(opts, path);
-
-	// make sure the path isn't already in the queue
-
-	entry_t* entry;
-
-	TAILQ_FOREACH(entry, &opts->path_q, next) {
-		printf("tailq entry %s\n", entry->path);
-
-		if (!strcmp(entry->path, buf)) {
-			break;
-		}
-	}
-
-	printf("%s %p\n", buf, entry);
-
-	if (entry) {
-		if (force) {
-			return;
-		}
-
-		errx(EXIT_FAILURE, "already in module search path (%s)", buf);
-	}
-
-	// all's good, add it
-
-	entry = malloc(sizeof *entry);
-	entry->path = strdup(buf);
-
-	if (!insert) {
-		TAILQ_INSERT_TAIL(&opts->path_q, entry, next);
-		goto change;
-	}
-
-	// TODO I'm not sure I understand the stuff in addpath in kldconfig.c
-	//      there's a chance there's a mistake in their for loop (?)
-
-	entry_t* skip = TAILQ_FIRST(&opts->path_q);
-
-	if (skip) {
-		TAILQ_INSERT_BEFORE(skip, entry, next);
-		goto change;
-	}
-
-	TAILQ_INSERT_TAIL(&opts->path_q, entry, next);
-
-change:
-
-	opts->changed = 1;
-}
-
-static void __del_path(opts_t* opts, char* path, int force) {
-	char* buf = mod_path_buf(opts, path);
-
-	// make sure the path isn't already in the queue
-
-	entry_t* entry;
-
-	TAILQ_FOREACH(entry, &opts->path_q, next) {
-		if (!strcmp(entry->path, buf)) {
-			break;
-		}
-	}
-
-	if (!entry) {
-		if (force) {
-			return;
-		}
-
-		errx(EXIT_FAILURE, "not in module search path (%s)", buf);
-	}
-
-	// all's good, delete it
-
-	TAILQ_REMOVE(&opts->path_q, entry, next);
-	opts->changed = 1;
-}
-
-static void parse_path(opts_t* opts) {
-	get_path(opts);
-	opts->prev_path = strdup(opts->path);
-
-	char* elem;
-
-	while ((elem = strsep(&opts->path, ";"))) {
-		if (opts->unique) {
-			__add_path(opts, elem, 1, 0);
-			continue;
-		}
-
-		entry_t* entry = malloc(sizeof *entry);
-		entry->path = strdup(elem);
-
-		TAILQ_INSERT_TAIL(&opts->path_q, entry, next);
 	}
 }
 
@@ -407,7 +229,7 @@ static int do_load(opts_t* opts) {
 
 	// process $PATHCTL sysctl
 
-	get_path(opts);
+	__get_path(opts);
 
 	char* tmp = opts->path;
 	int found = 0;
@@ -509,38 +331,6 @@ static int do_unload(opts_t* opts) {
 	return 0;
 }
 
-static int do_path_add(opts_t* opts) {
-	TAILQ_INIT(&opts->path_q);
-
-	parse_path(opts);
-
-	__add_path(opts, opts->mod_path, opts->force, opts->insert);
-
-	return 0;
-}
-
-static int do_path_del(opts_t* opts) {
-	TAILQ_INIT(&opts->path_q);
-
-	parse_path(opts);
-
-	__del_path(opts, opts->mod_path, opts->force);
-
-	return 0;
-}
-
-static int do_path_show(opts_t* opts) {
-	TAILQ_INIT(&opts->path_q);
-
-	parse_path(opts);
-
-	char* str = q_str(&opts->path_q);
-	printf("%s\n", PATHCTL);
-
-	free(str);
-	return 0;
-}
-
 typedef int (*action_t) (opts_t* opts);
 
 int main(int argc, char* argv[]) {
@@ -555,7 +345,7 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "a:d:fhIi:lm:Nn:rUuv")) != -1) {
+	while ((c = getopt(argc, argv, "a:d:fhi:lm:n:ruv")) != -1) {
 		// general options
 
 		if (c == 'f') {
@@ -566,33 +356,11 @@ int main(int argc, char* argv[]) {
 			opts.humanize = 1;
 		}
 
-		else if (c == 'I') {
-			opts.insert = 1;
-		}
-
-		else if (c == 'N') {
-			opts.dry = 1;
-		}
-
-		else if (c == 'U') {
-			opts.unique = 1;
-		}
-
 		else if (c == 'v') {
 			opts.verbose = 1;
 		}
 
 		// action options
-
-		else if (c == 'a') {
-			action = do_path_add;
-			opts.mod_path = optarg;
-		}
-
-		else if (c == 'd') {
-			action = do_path_del;
-			opts.mod_path = optarg;
-		}
 
 		else if (c == 'l') {
 			action = do_load;
@@ -600,10 +368,6 @@ int main(int argc, char* argv[]) {
 
 		else if (c == 'u') {
 			action = do_unload;
-		}
-
-		else if (c == 'r') {
-			action = do_path_show;
 		}
 
 		// id/filename/modulename-passing options
@@ -635,24 +399,5 @@ int main(int argc, char* argv[]) {
 
 	// take action
 
-	int rv = action(&opts);
-
-	if (rv < 0) {
-		return EXIT_FAILURE;
-	}
-
-	// if changed & verbose flag, show our original & new paths
-
-	if (opts.changed && opts.verbose) {
-		do_path_show(&opts);
-	}
-
-	// commit changes if there are any & we're not doing a dryrun
-
-	if (opts.dry || !opts.changed) {
-		return EXIT_SUCCESS;
-	}
-
-	set_path(&opts);
-	return EXIT_SUCCESS;
+	return action(&opts) < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
