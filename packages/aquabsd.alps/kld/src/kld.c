@@ -9,6 +9,7 @@
 //  - implement kldconfig's functionality 
 //  - proper usage information
 //  - manual page
+//  - write proper tests (create mock modules?)
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
@@ -53,6 +54,8 @@ typedef struct {
 	int verbose;
 	int humanize;
 	int force;
+	int unique;
+	int dry;
 
 	int id;
 	char* file;
@@ -60,6 +63,9 @@ typedef struct {
 
 	// path stuff
 
+	char* prev_path;
+	int changed;
+	
 	head_t path_q;
 
 	size_t path_len;
@@ -135,19 +141,85 @@ static void set_path(opts_t* opts) {
 	opts->path = new;
 }
 
+static void __add_path(opts_t* opts, char* path, int force, int insert) {
+	char* buf = realpath(path, NULL);
+	
+	// as explained in kldconfig.c:
+	// If the path exists, use it; otherwise, take the user-specified path at face value - may be a removed directory.
+
+	if (!buf) {
+		strlcpy(buf, path, sizeof buf);
+	}
+
+	size_t len = strlen(buf);
+
+	// if present, remove terminated path delimiter
+
+	if (len > 0 && buf[len - 1] == '/') {
+		buf[--len] = '\0';
+	}
+
+	// make sure the path isn't already in the queue
+
+	entry_t* entry;
+
+	TAILQ_FOREACH(entry, &opts->path_q, next) {
+		if (!strcmp(entry->path, buf)) {
+			break;
+		}
+	}
+
+	if (entry) {
+		if (force) {
+			return;
+		}
+
+		errx(EXIT_FAILURE, "already in module search path (%s)", buf);
+	}
+
+	// all's good, add it
+
+	entry = malloc(sizeof *entry);
+	entry->path = strdup(buf);
+
+	if (!insert) {
+		TAILQ_INSERT_TAIL(&opts->path_q, entry, next);
+		goto change;
+	}
+
+	// TODO I'm not sure I understand the stuff in addpath in kldconfig.c
+	//      there's a chance there's a mistake in their for loop (?)
+
+	entry_t* skip = TAILQ_FIRST(&opts->path_q);
+
+	if (skip) {
+		TAILQ_INSERT_BEFORE(skip, entry, next);
+		goto change;
+	}
+
+	TAILQ_INSERT_TAIL(&opts->path_q, entry, next);
+
+change:
+
+	opts->changed = 1;
+}
+
 static void parse_path(opts_t* opts) {
 	get_path(opts);
+	opts->prev_path = strdup(opts->path);
+
 	TAILQ_INIT(&opts->path_q);
 
-	char* bit;
+	char* elem;
 
-	while ((bit = strsep(&opts->path, ";"))) {
-		// if (opts->uniq) {
-		// 	continue; // TODO
-		// }
+	while ((elem = strsep(&opts->path, ";"))) {
+		if (opts->unique) {
+			__add_path(opts, elem, 1, 0);
+			continue;
+		}
 
 		entry_t* entry = malloc(sizeof *entry);
-		entry->path = strdup(bit);
+		entry->path = strdup(elem);
 
 		TAILQ_INSERT_TAIL(&opts->path_q, entry, next);
 	}
@@ -297,11 +369,11 @@ static int do_load(opts_t* opts) {
 	char* tmp = opts->path;
 	int found = 0;
 
-	char* bit;
+	char* elem;
 
-	while ((bit = strsep(&tmp, ";"))) {
-		char kld_path[strlen(bit) + 1];
-		strlcpy(kld_path, bit, sizeof kld_path);
+	while ((elem = strsep(&tmp, ";"))) {
+		char kld_path[strlen(elem) + 1];
+		strlcpy(kld_path, elem, sizeof kld_path);
 
 		// add slash if there isn't one already
 
@@ -318,7 +390,7 @@ static int do_load(opts_t* opts) {
 		found = 1;
 
 		if (stat_.st_dev != dev || stat_.st_ino != ino) {
-			warnx("%s will be loaded from %s, not the current directory", name, bit);
+			warnx("%s will be loaded from %s, not the current directory", name, elem);
 		}
 
 		break;
@@ -418,7 +490,7 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "dfhi:lm:n:ruv")) != -1) {
+	while ((c = getopt(argc, argv, "dfhi:lm:Nn:rUuv")) != -1) {
 		// general options
 		
 		if (c == 'h') {
@@ -431,6 +503,14 @@ int main(int argc, char* argv[]) {
 
 		else if (c == 'f') {
 			opts.force = 1;
+		}
+
+		else if (c == 'U') {
+			opts.unique = 1;
+		}
+
+		else if (c == 'N') {
+			opts.dry = 1;
 		}
 
 		// action options
@@ -476,5 +556,24 @@ int main(int argc, char* argv[]) {
 
 	// take action
 
-	return action(&opts) < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+	int rv = action(&opts);
+
+	if (rv < 0) {
+		return EXIT_FAILURE;
+	}
+
+	// if changed & verbose flag, show our original & new paths
+
+	if (opts.changed && opts.verbose) {
+		do_path_show(&opts);
+	}
+
+	// commit changes if there are any & we're not doing a dryrun
+
+	if (opts.dry || !opts.changed) {
+		return EXIT_SUCCESS;
+	}
+
+	set_path(&opts);
+	return EXIT_SUCCESS;
 }
