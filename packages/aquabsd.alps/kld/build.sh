@@ -7,8 +7,9 @@ rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR/package/bin/
 
 # build the package files
+# TODO remove debugging flag
 
-cc -std=c99 src/kld.c -o $BUILD_DIR/package/bin/kld -lutil
+cc -std=c99 -g src/kld.c -o $BUILD_DIR/package/bin/kld -lutil
 
 # create the package tarball
 

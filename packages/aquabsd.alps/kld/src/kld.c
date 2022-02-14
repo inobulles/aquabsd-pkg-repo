@@ -2,10 +2,13 @@
 //  - aquabsd-core/sbin/kldstat/kldstat.c
 //  - aquabsd-core/sbin/kldload/kldload.c
 //  - aquabsd-core/sbin/kldunload/kldunload.c
+//  - aquabsd-core/sbin/kldconfig/kldconfig.c
 
 // TODO
 //  - analog to kldstat's showdata option
 //  - implement kldconfig's functionality 
+//  - proper usage information
+//  - manual page
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
@@ -20,6 +23,7 @@ __FBSDID("$FreeBSD$");
 #include <libutil.h>
 
 #include <sys/param.h> // TODO sys/linker.h not including all the stuff it needs
+#include <sys/queue.h>
 #include <sys/stat.h>
 
 #include <sys/linker.h>
@@ -27,6 +31,14 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysctl.h>
 
 #define PATHCTL "kern.module_path"
+
+TAILQ_HEAD(head_t, entry_t);
+typedef struct head_t head_t;
+
+typedef struct entry_t {
+	char* path;
+	TAILQ_ENTRY(entry_t) next;
+} entry_t;
 
 static void __dead2 usage(void) {
 	fprintf(stderr,
@@ -45,7 +57,101 @@ typedef struct {
 	int id;
 	char* file;
 	char* mod;
+
+	// path stuff
+
+	head_t path_q;
+
+	size_t path_len;
+	char* path;
+
+	size_t mib_len;
+	int mib[5];
 } opts_t;
+
+static char* q_str(head_t* path_q) {
+	char* str = strdup("");
+
+	entry_t* entry;
+
+	TAILQ_FOREACH(entry, path_q, next) {
+		char* delim = TAILQ_NEXT(entry, next) ?
+			";" : "";
+
+		char* new;
+		asprintf(&new, "%s%s%s", str, entry->path, delim);
+
+		free(str);
+		str = new;
+	}
+
+	return str;
+}
+
+static void get_mib(opts_t* opts) {
+	if (opts->mib_len) {
+		return;
+	}
+
+	opts->mib_len = nitems(opts->mib);
+
+	if (sysctlnametomib(PATHCTL, opts->mib, &opts->mib_len) < 0) {
+		err(EXIT_FAILURE, "sysctlnametomib(%s)", PATHCTL);
+	}
+}
+
+static void get_path(opts_t* opts) {
+	if (opts->path) {
+		free(opts->path);
+	}
+
+	get_mib(opts);
+
+	if (sysctl(opts->mib, opts->mib_len, NULL, &opts->path_len, NULL, 0) < 0) {
+		err(EXIT_FAILURE, "getting path: sysctl(%s) - size only", PATHCTL);
+	}
+
+	opts->path = malloc(opts->path_len + 1);
+
+	if (sysctl(opts->mib, opts->mib_len, opts->path, &opts->path_len, NULL, 0) < 0) {
+		err(EXIT_FAILURE, "getting path: sysctl(%s)", PATHCTL);
+	}
+}
+
+static void set_path(opts_t* opts) {
+	get_mib(opts);
+
+	char* new = q_str(&opts->path_q);
+	size_t len = strlen(new) + 1;
+
+	if (sysctl(opts->mib, opts->mib_len, NULL, NULL, new, len) < 0) {
+		err(EXIT_FAILURE, "setting path: sysctl(%s)", PATHCTL);
+	}
+
+	if (opts->path) {
+		free(opts->path);
+	}
+
+	opts->path = new;
+}
+
+static void parse_path(opts_t* opts) {
+	get_path(opts);
+	TAILQ_INIT(&opts->path_q);
+
+	char* bit;
+
+	while ((bit = strsep(&opts->path, ";"))) {
+		// if (opts->uniq) {
+		// 	continue; // TODO
+		// }
+
+		entry_t* entry = malloc(sizeof *entry);
+		entry->path = strdup(bit);
+
+		TAILQ_INSERT_TAIL(&opts->path_q, entry, next);
+	}
+}
 
 static int compute_id(opts_t* opts) {
 	if (!opts->file) {
@@ -186,33 +292,16 @@ static int do_load(opts_t* opts) {
 
 	// process $PATHCTL sysctl
 
-	int mib[5];
-	size_t mib_len = nitems(mib);
+	get_path(opts);
 
-	if (sysctlnametomib(PATHCTL, mib, &mib_len) < 0) {
-		err(EXIT_FAILURE, "sysctlnametomib(%s)", PATHCTL);
-	}
-
-	size_t path_len;
-
-	if (sysctl(mib, mib_len, NULL, &path_len, NULL, 0) < 0) {
-		err(EXIT_FAILURE, "getting path: sysctl(%s) - size only", PATHCTL);
-	}
-
-	char* path = malloc(path_len + 1);
-
-	if (sysctl(mib, mib_len, path, &path_len, NULL, 0) < 0) {
-		err(EXIT_FAILURE, "getting path: sysctl(%s)", PATHCTL);
-	}
-
-	char* tmp = path;
+	char* tmp = opts->path;
 	int found = 0;
 
-	char* elem;
+	char* bit;
 
-	while ((elem = strsep(&tmp, ";"))) {
-		char kld_path[strlen(elem) + 1];
-		strlcpy(kld_path, elem, sizeof kld_path);
+	while ((bit = strsep(&tmp, ";"))) {
+		char kld_path[strlen(bit) + 1];
+		strlcpy(kld_path, bit, sizeof kld_path);
 
 		// add slash if there isn't one already
 
@@ -229,13 +318,11 @@ static int do_load(opts_t* opts) {
 		found = 1;
 
 		if (stat_.st_dev != dev || stat_.st_ino != ino) {
-			warnx("%s will be loaded from %s, not the current directory", name, elem);
+			warnx("%s will be loaded from %s, not the current directory", name, bit);
 		}
 
 		break;
 	}
-
-	free(path);
 
 	if (!found) {
 		warnx("%s is not in the module path", name);
@@ -307,32 +394,31 @@ static int do_unload(opts_t* opts) {
 	return 0;
 }
 
-typedef enum {
-	ACTION_STAT,
-	ACTION_LOAD,
-	ACTION_UNLOAD
-} action_t;
+static int do_path_show(opts_t* opts) {
+	parse_path(opts);
+
+	char* str = q_str(&opts->path_q);
+	printf("%s\n", str);
+
+	free(str);
+	return 0;
+}
+
+typedef int (*action_t) (opts_t* opts);
 
 int main(int argc, char* argv[]) {
 	// options
 
-	action_t action = ACTION_STAT;
+	action_t action = do_stat;
 	
-	opts_t opts = {
-		.verbose = 0,
-		.humanize = 0,
-		.force = 0,
-
-		.id = -1,
-		.file = NULL,
-		.mod = NULL,
-	};
+	opts_t opts = { 0 };
+	opts.id = -1;
 
 	// get options
 
 	int c;
 
-	while ((c = getopt(argc, argv, "fhi:lm:n:uv")) != -1) {
+	while ((c = getopt(argc, argv, "dfhi:lm:n:ruv")) != -1) {
 		// general options
 		
 		if (c == 'h') {
@@ -350,11 +436,15 @@ int main(int argc, char* argv[]) {
 		// action options
 
 		else if (c == 'l') {
-			action = ACTION_LOAD;
+			action = do_load;
 		}
 
 		else if (c == 'u') {
-			action = ACTION_UNLOAD;
+			action = do_unload;
+		}
+
+		else if (c == 'r') {
+			action = do_path_show;
 		}
 
 		// id/filename/modulename-passing options
@@ -386,19 +476,5 @@ int main(int argc, char* argv[]) {
 
 	// take action
 
-	int rv = 0; // success
-
-	if (action == ACTION_STAT) {
-		rv = do_stat(&opts);
-	}
-
-	else if (action == ACTION_LOAD) {
-		rv = do_load(&opts);
-	}
-
-	else if (action == ACTION_UNLOAD) {
-		rv = do_unload(&opts);
-	}
-
-	return rv < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+	return action(&opts) < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
