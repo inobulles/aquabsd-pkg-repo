@@ -7,7 +7,6 @@
 //  - aquabsd-core/sbin/kldunload/kldunload.c
 
 // TODO
-//  - analog to kldstat's showdata option
 //  - proper usage information
 //  - manual page
 //  - write proper tests (create mock modules?)
@@ -43,6 +42,7 @@ static void __dead2 usage(void) {
 }
 
 typedef struct {
+	int data;
 	int humanize;
 	int force;
 	int verbose;
@@ -117,7 +117,13 @@ static void print_mod(opts_t* opts, int id) {
 		return;
 	}
 
-	printf("%3d %s\n", stat.id, stat.name);
+	printf("%3d %s", stat.id, stat.name);
+
+	if (opts->data) {
+		printf(" (0x%lx)", stat.data.ulongval);
+	}
+
+	printf("\n");
 }
 
 static void print_file(opts_t* opts, int id) {
@@ -345,10 +351,14 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "a:d:fhi:lm:n:ruv")) != -1) {
+	while ((c = getopt(argc, argv, "dfhi:lm:n:uv")) != -1) {
 		// general options
 
-		if (c == 'f') {
+		if (c == 'd') {
+			opts.data = 1;
+		}
+
+		else if (c == 'f') {
 			opts.force = 1;
 		}
 
