@@ -11,6 +11,7 @@
 //  - manual page
 //  - write proper tests (create mock modules?)
 //  - how necessary are the -U & -m options from kldconfig?
+//  - now that I think of it, I don't think the kldconfig stuff is very important here... you can just use 'sysctl kern.module_path'
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
@@ -52,17 +53,20 @@ static void __dead2 usage(void) {
 }
 
 typedef struct {
-	int verbose;
+	int dry;
 	int humanize;
+	int insert;
 	int force;
 	int unique;
-	int dry;
+	int verbose;
 
 	int id;
 	char* file;
 	char* mod;
 
 	// path stuff
+
+	char* mod_path;
 
 	char* prev_path;
 	int changed;
@@ -142,14 +146,17 @@ static void set_path(opts_t* opts) {
 	opts->path = new;
 }
 
-static void __add_path(opts_t* opts, char* path, int force, int insert) {
+static char* mod_path_buf(opts_t* opts, char* path) {
 	char* buf = realpath(path, NULL);
 	
 	// as explained in kldconfig.c:
 	// If the path exists, use it; otherwise, take the user-specified path at face value - may be a removed directory.
 
 	if (!buf) {
-		strlcpy(buf, path, sizeof buf);
+		size_t bytes = strlen(path) + 1;
+
+		buf = malloc(bytes);
+		strncpy(buf, path, bytes - 1);
 	}
 
 	size_t len = strlen(buf);
@@ -160,15 +167,25 @@ static void __add_path(opts_t* opts, char* path, int force, int insert) {
 		buf[--len] = '\0';
 	}
 
+	return buf;
+}
+
+static void __add_path(opts_t* opts, char* path, int force, int insert) {
+	char* buf = mod_path_buf(opts, path);
+
 	// make sure the path isn't already in the queue
 
 	entry_t* entry;
 
 	TAILQ_FOREACH(entry, &opts->path_q, next) {
+		printf("tailq entry %s\n", entry->path);
+
 		if (!strcmp(entry->path, buf)) {
 			break;
 		}
 	}
+
+	printf("%s %p\n", buf, entry);
 
 	if (entry) {
 		if (force) {
@@ -205,11 +222,36 @@ change:
 	opts->changed = 1;
 }
 
+static void __del_path(opts_t* opts, char* path, int force) {
+	char* buf = mod_path_buf(opts, path);
+
+	// make sure the path isn't already in the queue
+
+	entry_t* entry;
+
+	TAILQ_FOREACH(entry, &opts->path_q, next) {
+		if (!strcmp(entry->path, buf)) {
+			break;
+		}
+	}
+
+	if (!entry) {
+		if (force) {
+			return;
+		}
+
+		errx(EXIT_FAILURE, "not in module search path (%s)", buf);
+	}
+
+	// all's good, delete it
+
+	TAILQ_REMOVE(&opts->path_q, entry, next);
+	opts->changed = 1;
+}
+
 static void parse_path(opts_t* opts) {
 	get_path(opts);
 	opts->prev_path = strdup(opts->path);
-
-	TAILQ_INIT(&opts->path_q);
 
 	char* elem;
 
@@ -398,7 +440,7 @@ static int do_load(opts_t* opts) {
 	}
 
 	if (!found) {
-		warnx("%s is not in the module path", name);
+		warnx("%s is not in module search path", name);
 		return -1;
 	}
 
@@ -467,11 +509,33 @@ static int do_unload(opts_t* opts) {
 	return 0;
 }
 
+static int do_path_add(opts_t* opts) {
+	TAILQ_INIT(&opts->path_q);
+
+	parse_path(opts);
+
+	__add_path(opts, opts->mod_path, opts->force, opts->insert);
+
+	return 0;
+}
+
+static int do_path_del(opts_t* opts) {
+	TAILQ_INIT(&opts->path_q);
+
+	parse_path(opts);
+
+	__del_path(opts, opts->mod_path, opts->force);
+
+	return 0;
+}
+
 static int do_path_show(opts_t* opts) {
+	TAILQ_INIT(&opts->path_q);
+
 	parse_path(opts);
 
 	char* str = q_str(&opts->path_q);
-	printf("%s\n", str);
+	printf("%s\n", PATHCTL);
 
 	free(str);
 	return 0;
@@ -491,30 +555,44 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "dfhi:lm:Nn:rUuv")) != -1) {
+	while ((c = getopt(argc, argv, "a:d:fhIi:lm:Nn:rUuv")) != -1) {
 		// general options
-		
-		if (c == 'h') {
-			opts.humanize = 1;
-		}
 
-		else if (c == 'v') {
-			opts.verbose = 1;
-		}
-
-		else if (c == 'f') {
+		if (c == 'f') {
 			opts.force = 1;
 		}
 
-		else if (c == 'U') {
-			opts.unique = 1;
+		else if (c == 'h') {
+			opts.humanize = 1;
+		}
+
+		else if (c == 'I') {
+			opts.insert = 1;
 		}
 
 		else if (c == 'N') {
 			opts.dry = 1;
 		}
 
+		else if (c == 'U') {
+			opts.unique = 1;
+		}
+
+		else if (c == 'v') {
+			opts.verbose = 1;
+		}
+
 		// action options
+
+		else if (c == 'a') {
+			action = do_path_add;
+			opts.mod_path = optarg;
+		}
+
+		else if (c == 'd') {
+			action = do_path_del;
+			opts.mod_path = optarg;
+		}
 
 		else if (c == 'l') {
 			action = do_load;
