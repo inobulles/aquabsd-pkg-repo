@@ -10,6 +10,7 @@
 //  - proper usage information
 //  - manual page
 //  - write proper tests (create mock modules?)
+//  - how necessary are the -U & -m options from kldconfig?
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");

@@ -24,7 +24,6 @@ mkdir -p $BUILD_DIR/package/usr/
 	# move built files to their appropriate place in the package
 
 	mv iar/bin/libiar.a package/usr/lib/libiar.a
-	mv iar/bin/libiar.so package/usr/lib/libiar.so
 	mv iar/src/iar.h package/usr/include/iar.h
 )
 
