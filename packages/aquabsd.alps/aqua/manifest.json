@@ -13,8 +13,56 @@
 	],
 	"deps": {
 		"libiar": {
-			"version": "1221a",
+			"version": "0222a",
 			"origin": "aquabsd.alps/libiar"
+		},
+		"icu": {
+			"version": "70.1_1,1",
+			"origin": "devel/icu"
+		},
+		"librsvg2-rust": {
+			"version": "2.52.5_2",
+			"origin": "graphics/librsvg2-rust"
+		},
+		"libX11": {
+			"version": "1.7.2,1",
+			"origin": "x11/libX11"
+		},
+		"libXcomposite": {
+			"version": "0.4.5,1",
+			"origin": "x11/libXcomposite"
+		},
+		"libXfixes": {
+			"version": "6.0.0",
+			"origin": "x11/libXfixes"
+		},
+		"libXinerama": {
+			"version": "1.1.4_2,1",
+			"origin": "x11/libXinerama"
+		},
+		"libxcb": {
+			"version": "1.14_1",
+			"origin": "x11/libxcb"
+		},
+		"mesa-libs": {
+			"version": "21.3.4",
+			"origin": "graphics/mesa-libs"
+		},
+		"pango": {
+			"version": "1.50.3",
+			"origin": "x11-toolkits/pango"
+		},
+		"xcb-util": {
+			"version": "0.4.0_2,1",
+			"origin": "x11/xcb-util"
+		},
+		"xcb-util-image": {
+			"version": "0.4.0_1",
+			"origin": "x11/xcb-util-image"
+		},
+		"xcb-util-wm": {
+			"version": "0.4.1_3",
+			"origin": "x11/xcb-util-wm"
 		}
 	}
 }
