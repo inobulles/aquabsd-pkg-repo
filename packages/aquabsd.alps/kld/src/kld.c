@@ -7,7 +7,6 @@
 //  - aquabsd-core/sbin/kldunload/kldunload.c
 
 // TODO
-//  - proper usage information
 //  - manual page
 //  - write proper tests (create mock modules?)
 
@@ -34,8 +33,12 @@ __FBSDID("$FreeBSD$");
 
 static void __dead2 usage(void) {
 	fprintf(stderr,
-		"usage: %1$s [-hv] [-l filename]\n"
-		"       %1$s [-hv] [-u modname]\n",
+		"usage: %1$s [-hv]\n"
+		"       %1$s [-dhv] -i id\n"
+		"       %1$s [-dhv] -n filename\n"
+		"       %1$s [-dhv] -m modname\n"
+		"       %1$s [-hv] -l [-i id] [-n filename] [-m modname]\n"
+		"       %1$s [-hv] -u [-i id] [-n filename] [-m modname]\n",
 	getprogname());
 
 	exit(1);
