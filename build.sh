@@ -38,7 +38,7 @@ while test $# -gt 0; do
 
 					if [ "$EUID" = 0 ]; then
 						exit 1
-						make build-depends-list | cut -c 12- | xargs pkg install -y # https://forums.freebsd.org/threads/build-port-but-install-dependencies-with-pkg.54447/
+						make all-depends-list | cut -c 12- | xargs pkg install -y # https://forums.freebsd.org/threads/build-port-but-install-dependencies-with-pkg.54447/
 					fi
 
 					make package
