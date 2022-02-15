@@ -12,7 +12,7 @@ mkdir -p $BUILD_DIR/package/usr/
 	export AQUA_ROOT_PATH=/root/.aqua-root/
 	export AQUA_DATA_PATH=/usr/share/aqua/
 	export AQUA_BIN_PATH=/usr/bin/
-	
+
 	# build the package files
 
 	git clone https://github.com/inobulles/aqua-unix --branch main --depth 1
@@ -20,7 +20,7 @@ mkdir -p $BUILD_DIR/package/usr/
 	( cd aqua-unix/
 		sh build.sh --auto-iar --kos --devices --devbranch aquabsd.alps
 	)
-	
+
 	# create package directories
 
 	mkdir package/$AQUA_BIN_PATH
@@ -30,7 +30,7 @@ mkdir -p $BUILD_DIR/package/usr/
 
 	mv aqua-unix/bin/kos package/$AQUA_BIN_PATH/aqua
 	mv aqua-unix/bin/devices/* package/$AQUA_DATA_PATH/devices/
-	
+
 	# the 'aquabsd.alps.ui' device is not (yet) open source, so create a stub for it
 
 	touch package/$AQUA_DATA_PATH/devices/aquabsd.alps.ui.device
