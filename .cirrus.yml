@@ -9,6 +9,7 @@ task:
   name: Test all packages in the PKG repository build
   timeout_in: 30m
   install_script:
+  - echo FreeBSD: \{ url: \"http://pkg0.bme.freebsd.org/${ABI}/latest\" \} > /usr/local/etc/pkg/repos/FreeBSD.conf
   - pkg install -y pkgconf pango librsvg2-rust icu git-lite libxcb xcb-util xcb-util-wm xcb-util-image xcb libX11 mesa-libs glew libXcomposite libXfixes libXinerama # TODO what was glew for again?
   setup_script: # copying the FreeBSD Cirrus CI 'setup_script'
   - uname -a
