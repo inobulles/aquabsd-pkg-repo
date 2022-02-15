@@ -7,7 +7,6 @@ compute_engine_instance:
 
 task:
   name: Test all packages in the PKG repository build
-  timeout_in: 30m
   install_script:
   - mkdir -p /usr/local/etc/pkg/repos
   - cat FreeBSD.conf > /usr/local/etc/pkg/repos/FreeBSD.conf 
