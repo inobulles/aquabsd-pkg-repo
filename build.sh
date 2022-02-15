@@ -36,7 +36,8 @@ while test $# -gt 0; do
 				elif [ -f Makefile ]; then
 					make clean
 
-					if [ "$EUID" -e 0 ]; then
+					if [ "$EUID" = 0 ]; then
+						exit 1
 						make build-depends-list | cut -c 12- | xargs pkg install -y # https://forums.freebsd.org/threads/build-port-but-install-dependencies-with-pkg.54447/
 					fi
 
