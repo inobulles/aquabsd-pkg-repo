@@ -15,7 +15,7 @@ task:
   - df -h
   - pkg --version
   script:
-  - sh build.sh aquabsd.alps
+  - sh build.sh aquabsd.alps nvidia
   post_script:
   - ls -la .build/
   - df -h
