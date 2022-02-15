@@ -36,7 +36,7 @@ while test $# -gt 0; do
 				elif [ -f Makefile ]; then
 					make clean
 
-					if [ $EUID = 0 ]; then
+					if [ $(id -u) = 0 ]; then
 						make missing | xargs pkg install -y
 					fi
 
