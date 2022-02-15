@@ -26,12 +26,19 @@ while test $# -gt 0; do
 	echo "Building packages from the '$1' category ..."
 
 	( cd $category
-		for package in $(find -L . -maxdepth 1 -type d -not -name ".*" | cut -c3-); do
+		# compile packages in the right order (some depend on others, and a proper dependcy system would be a tad too complicated)
+
+		for package in $(cat order); do
 			echo -e "\tBuilding '$category/$package' ..."
 
 			( cd $package
 				if [ -f build.sh ]; then
 					sh build.sh
+
+					if [ $(id -u) = 0 ]; then
+						pkg install -y *.pkg
+					fi
+
 					mv *.pkg $BUILD_DIR
 				elif [ -f Makefile ]; then
 					make clean
@@ -41,6 +48,11 @@ while test $# -gt 0; do
 					fi
 
 					make package BATCH=
+
+					if [ $(id -u) = 0 ]; then
+						pkg install -y work/pkg/*.pkg
+					fi
+
 					mv work/pkg/*.pkg $BUILD_DIR
 				else
 					echo -e "\tDon't know how to build $package 😢"
