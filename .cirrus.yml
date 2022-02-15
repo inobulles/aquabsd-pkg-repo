@@ -13,9 +13,11 @@ task:
   - echo "Add Linux support to kernel 🐧"
   - kldload linux64
   - kldstat
-  install_script:
   - mkdir -p /usr/local/etc/pkg/repos
-  - cat FreeBSD.conf > /usr/local/etc/pkg/repos/FreeBSD.conf 
+  - cp ci/FreeBSD.conf /usr/local/etc/pkg/repos
+  - mkdir -p /usr/ports/Keywords
+  - cp ci/*.ucl /usr/ports/Keywords
+  install_script:
   - pkg install -y pkgconf pango librsvg2-rust icu git-lite libxcb xcb-util xcb-util-wm xcb-util-image xcb libX11 mesa-libs glew libXcomposite libXfixes libXinerama # TODO what was glew for again?
   script:
   - sh build.sh aquabsd.alps nvidia
