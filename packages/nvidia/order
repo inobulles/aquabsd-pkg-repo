@@ -1,3 +1,4 @@
 nvidia-driver
 linux-nvidia-libs
 nv-codec-headers
+ffmpeg
