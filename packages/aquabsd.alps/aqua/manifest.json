@@ -1,7 +1,7 @@
 {
 	"name": "aqua",
 	"origin": "aquabsd.alps/aqua",
-	"version": "1221a",
+	"version": "0222a",
 	"comment": "Core AQUA devices and KOS executable for aquaBSD",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/aquabsd-pkg-repo/tree/main/packages/aquabsd.alps/aqua",
