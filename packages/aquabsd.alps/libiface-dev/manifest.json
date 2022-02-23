@@ -1,0 +1,14 @@
+{
+	"name": "libiface-dev",
+	"origin": "aquabsd.alps/libiface-dev",
+	"version": "0222a",
+	"comment": "Development headers for libiface",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-pkg-repo",
+	"desc": "Development headers for libiface.\nFuller documentation can be found in the libiface package\n\nWWW: https://github.com/inobulles/aquabsd-pkg-repo",
+	"arch": "amd64",
+	"prefix": "/usr/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}

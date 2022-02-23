@@ -1,0 +1,14 @@
+{
+	"name": "libiface",
+	"origin": "aquabsd.alps/libiface",
+	"version": "0222a",
+	"comment": "Development headers for libiface",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-pkg-repo",
+	"desc": "This is a library (both shared and static) applications can use to aid in managing network interfaces.\nIf you need the development headers for libiface, install the libiface-dev package.\nFuller documentation can be found in the iface frontend.\n\nWWW: https://github.com/inobulles/aquabsd-pkg-repo",
+	"arch": "amd64",
+	"prefix": "/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}

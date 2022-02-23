@@ -1,0 +1,20 @@
+{
+	"name": "iface",
+	"origin": "aquabsd.alps/iface",
+	"version": "0222a",
+	"comment": "Command-line utility for network interface configuration",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-core",
+	"desc": "This utility is meant to provide a more modern & cleaner replacement to the old and fairly arcane ifconfig command from 4.2BSD.\nIt's a frontend to the libiface library.\n\nWWW: https://github.com/inobulles/aquabsd-core",
+	"arch": "amd64",
+	"prefix": "/",
+	"categories": [
+		"aquabsd.alps"
+	],
+	"deps": {
+		"libiface": {
+			"version": "0222a",
+			"origin": "aquabsd.alps/libiface"
+		}
+	}
+}

@@ -5,3 +5,6 @@ kld
 libcopyfile
 libiar-dev
 libmkfs_msdos
+libiface-dev
+libiface
+iface
