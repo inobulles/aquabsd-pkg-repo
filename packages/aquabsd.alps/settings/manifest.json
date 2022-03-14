@@ -1,0 +1,20 @@
+{
+	"name": "settings",
+	"origin": "aquabsd.alps/settings",
+	"version": "0322a",
+	"comment": "Command-line utility for managing system settings",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-pkg-repo",
+	"desc": "This utility is both meant as a replacement to the sysctl command from 4.4BSD, and as a more centralized and high-level way of managing settings on aquaBSD systems.\nIt's a frontend to the libsettings library.\n\nWWW: https://github.com/inobulles/aquabsd-pkg-repo",
+	"arch": "amd64",
+	"prefix": "/",
+	"categories": [
+		"aquabsd.alps"
+	],
+	"deps": {
+		"libiface": {
+			"version": "0322a",
+			"origin": "aquabsd.alps/libsettings"
+		}
+	}
+}
