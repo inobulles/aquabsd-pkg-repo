@@ -1,0 +1,14 @@
+{
+	"name": "libsettings-dev",
+	"origin": "aquabsd.alps/libsettings-dev",
+	"version": "0322a",
+	"comment": "Development headers for libsettings",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-pkg-repo",
+	"desc": "Development headers for libsettings.\nFuller documentation can be found in the libsettings package\n\nWWW: https://github.com/inobulles/aquabsd-pkg-repo",
+	"arch": "amd64",
+	"prefix": "/usr/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}

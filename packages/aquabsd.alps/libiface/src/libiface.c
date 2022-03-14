@@ -161,7 +161,7 @@ int iface_get_flags(iface_t* iface, iface_flag_t* flag_ref) {
 	return __get_flags(iface, &ifr, flag_ref);
 }
 
-int iface_set_flags(iface_t* iface, iface_flag_t flag) {
+int iface_set_flags(iface_t* iface, int val) {
 	struct ifreq ifr;
 	iface_flag_t curr_flags;
 
@@ -171,12 +171,12 @@ int iface_set_flags(iface_t* iface, iface_flag_t flag) {
 
 	// if the given flag value is negative, we wanna *remove* the flag
 
-	if (flag < 0) {
-		curr_flags &= ~(-flag);
+	if (val < 0) {
+		curr_flags &= ~(-val);
 	}
 
 	else {
-		curr_flags |= flag;
+		curr_flags |= val;
 	}
 
 	ifr.ifr_flags = curr_flags & 0xFFFF;

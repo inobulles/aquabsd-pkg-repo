@@ -3,3 +3,5 @@
 *.sw[op]
 *.core
 work
+
+packages/aquabsd.alps/libmkfs
