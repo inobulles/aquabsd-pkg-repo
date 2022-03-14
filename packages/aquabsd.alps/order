@@ -8,3 +8,5 @@ libmkfs_msdos
 libiface-dev
 libiface
 iface
+libsettings-dev
+libsettings

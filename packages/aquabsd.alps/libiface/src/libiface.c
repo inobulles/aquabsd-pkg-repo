@@ -62,7 +62,7 @@ int iface_list(iface_t** ifaces_ref, size_t* iface_len_ref) {
 		}
 
 		sa_family_t family = ifa->ifa_addr->sa_family;
-		
+
 		if (family != AF_LINK) { // we're looking for link interfaces here
 			continue;
 		}
@@ -122,7 +122,7 @@ int iface_list(iface_t** ifaces_ref, size_t* iface_len_ref) {
 void iface_free(iface_t* ifaces, size_t iface_len) {
 	for (int i = 0; i < iface_len; i++) {
 		iface_t* iface = &ifaces[i];
-		
+
 		if (iface->dgram_sock) {
 			close(iface->dgram_sock);
 		}

@@ -1,0 +1,14 @@
+{
+	"name": "libsettings",
+	"origin": "aquabsd.alps/libsettings",
+	"version": "0322a",
+	"comment": "Library for managing various system settings",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/aquabsd-pkg-repo",
+	"desc": "This is a library (both shared & static) applications can use to manage system settings.\nIf you need the development headers for libsettings, install the libsettings-dev package.\nFuller documentation can be found in the settings frontend.\n\nWWW: https://github.com/inobulles/aquabsd-pkg-repo",
+	"arch": "amd64",
+	"prefix": "/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}
