@@ -46,14 +46,31 @@ typedef struct {
 	SETTINGS_TYPE_U16,
 	SETTINGS_TYPE_U32,
 	SETTINGS_TYPE_U64,
+
+	// some much more specific aquaBSD- & architechture-specific types
+
+	SETTINGS_TYPE_CLOCKINFO,
+	SETTINGS_TYPE_TIMEVAL,
+	SETTINGS_TYPE_LOADAVG,
+	SETTINGS_TYPE_VMTOTAL,
+	SETTINGS_TYPE_INPUT_ID,
+	SETTINGS_TYPE_PAGESIZES,
+
+#if defined(__amd64__)
+	SETTINGS_TYPE_EFI_MAP_HEADER,
+#endif
+
+#if defined(__amd64__) || defined(__i386__)
+	SETTINGS_TYPE_BIOS_SMAP_XATTR,
+#endif
 } settings_type_t;
 
 typedef struct {
 	char* key;
 
-	settings_privilege_t;
+	settings_privilege_t privilege;
 	settings_type_t type;
-	bool tunable; // some settings are runtime tunable, some not
+	bool tuneable; // some settings are runtime tuneable, some not
 } setting_t;
 
 // allocate a flat list of 'setting_t' objects in 'settings_ref' & 'settings_len_ref'
@@ -73,7 +90,7 @@ int setting_read(setting_t* setting, void** data_ref, size_t* len_ref);
 int setting_write(setting_t* setting, void* data, size_t len, settings_priority_t priority);
 
 // create a new setting with key 'key', privilege 'privilege', & type 'type'
-// created settings are always tunable
+// created settings are always tuneable
 // 'SETTINGS_PRIVILEGE_BOOT' & 'SETTINGS_PRIVILEGE_KERN' settings are provided by the bootloader & kernel, and thus are not privileges you can create settings at
 
 int setting_create(char* key, settings_privilege_t privilege, settings_type_t type, settings_priority_t priority);
