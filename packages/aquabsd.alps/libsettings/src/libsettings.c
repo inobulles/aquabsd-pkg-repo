@@ -261,24 +261,28 @@ error:
 
 int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege, int user) {
 	if (!settings_ref || !settings_len_ref) {
-		return __emit_error("settings_list: passed references point to NULL", NULL, NULL);
+		return __emit_error("settings_list: Passed references point to NULL", NULL, NULL);
 	}
-
-	int rv = -1;
 
 	if (privilege == SETTINGS_PRIVILEGE_BOOT || privilege == SETTINGS_PRIVILEGE_KERN) {
 		if (__list_sysctl(settings_ref, settings_len_ref, privilege) < 0) {
-			goto error;
+			return -1; // error already emitted
 		}
 	}
 
-	// success
+	else if (privilege == SETTINGS_PRIVILEGE_USER) {
+		return __emit_error("settings_list: Unimplemented privilege level (USER)", NULL, NULL);
+	}
 
-	rv = 0;
+	else if (privilege == SETTINGS_PRIVILEGE_AQUA) {
+		return __emit_error("settings_list: Unimplemented privilege level (AQUA)", NULL, NULL);
+	}
 
-error:
+	else {
+		return __emit_error("settings_list: Unknown privilege level", NULL, NULL);
+	}
 
-	return rv;
+	return 0;
 }
 
 int setting_read(setting_t* setting, void** data_ref, size_t* len_ref) {
