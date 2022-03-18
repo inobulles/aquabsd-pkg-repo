@@ -68,11 +68,21 @@ typedef enum {
 } settings_type_t;
 
 typedef struct {
+	// general fields
+
 	char* key;
+	char* descr;
+
+	// properties of the setting
 
 	settings_privilege_t privilege;
 	settings_type_t type;
 	bool writeable; // some settings are writeable at runtime, some not
+
+	// 'sysctl' specific stuff
+
+	size_t oid_len;
+	int* oid;
 } setting_t;
 
 char* settings_error_str(void);

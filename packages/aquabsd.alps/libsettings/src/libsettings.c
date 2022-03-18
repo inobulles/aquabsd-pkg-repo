@@ -51,6 +51,8 @@ static inline setting_t* __list_add(setting_t*** settings_ref, size_t* settings_
 	return setting;
 }
 
+// TODO should I really be using pre-ANSI style C declarations?
+
 static inline int __query_sysctl(query, oid, oid_len, buf, buf_len_ref)
 	int query;
 	size_t oid_len;
@@ -77,6 +79,7 @@ static inline int __query_sysctl(query, oid, oid_len, buf, buf_len_ref)
 
 		QUERY_CASE(CTL_SYSCTL_NAME)
 		QUERY_CASE(CTL_SYSCTL_OIDFMT)
+		QUERY_CASE(CTL_SYSCTL_OIDDESCR)
 
 		#undef QUERY_CASE
 
@@ -139,6 +142,12 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	setting->key = strdup(name);
 	setting->privilege = privilege;
 	setting->writeable = writeable;
+
+	// 'sysctl' setting, so fill in 'setting_t.oid' & 'setting_t.oid_len'
+
+	setting->oid_len = oid_len;
+	setting->oid = malloc(oid_len * sizeof *oid);
+	memcpy(setting->oid, oid, oid_len * sizeof *oid);
 
 	// fill in type field of setting
 
@@ -286,7 +295,18 @@ int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_
 }
 
 int setting_read(setting_t* setting, void** data_ref, size_t* len_ref) {
-	return -1; // TODO
+	// read description
+
+	char descr[BUFSIZ];
+	size_t descr_len = sizeof descr;
+
+	if (__query_sysctl(CTL_SYSCTL_OIDDESCR, setting->oid, setting->oid_len, descr, &descr_len) < 0) {
+		return -1; // error already emitted
+	}
+
+	setting->descr = strdup(descr);
+
+	return 0;
 }
 
 int setting_write(setting_t* setting, void* data, size_t len, settings_priority_t priority) {
@@ -306,8 +326,20 @@ int setting_free(setting_t* setting) {
 		return -1;
 	}
 
+	// general stuff
+
 	if (setting->key) {
 		free(setting->key);
+	}
+
+	if (setting->descr) {
+		free(setting->descr);
+	}
+
+	// 'sysctl' stuff
+
+	if (setting->oid) {
+		free(setting->oid);
 	}
 
 	return 0;
