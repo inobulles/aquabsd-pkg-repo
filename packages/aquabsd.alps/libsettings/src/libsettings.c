@@ -67,7 +67,7 @@ static inline int __query_sysctl(query, oid, oid_len, buf, buf_len_ref)
 
 	memcpy(name + 2, oid, oid_len);
 
-	if (sysctl(name, oid_len / sizeof(int) + 2, buf, buf_len_ref, 0, 0) < 0) {
+	if (sysctl(name, oid_len / sizeof(int) + 2, buf, buf_len_ref, NULL, 0) < 0) {
 		char* query_name = "UNKNOWN";
 
 		#define QUERY_CASE(name) \
@@ -94,7 +94,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	size_t* settings_len_ref;
 	settings_privilege_t privilege;
 	size_t oid_len;
-	int oid[oid_len];
+	int* oid;
 {
 	// get name of sysctl from OID
 
@@ -115,7 +115,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 		return -1; // error already emitted
 	}
 
-	unsigned kind = *(unsigned*) buf;
+	uint32_t kind = *(uint32_t*) buf;
 	char* fmt = (void*) (buf + sizeof kind);
 
 	bool tuneable = !(kind & CTLFLAG_TUN);
@@ -148,6 +148,25 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	setting->oid_len = oid_len;
 	setting->oid = malloc(oid_len * sizeof *oid);
 	memcpy(setting->oid, oid, oid_len * sizeof *oid);
+
+	// should we skip this one?
+	// we keep track of encountered skip nodes to ignore descendents too
+
+	static int skip_len = 0;
+	static int skip_oid[CTL_MAXNAME];
+
+	if ((kind & CTLFLAG_SKIP) && (!skip_len || skip_len >= oid_len)) {
+		skip_len = oid_len;
+		memcpy(skip_oid, oid, skip_len);
+	}
+
+	if (0 < skip_len && skip_len <= oid_len && memcmp(skip_oid, oid, skip_len) == 0) {
+		setting->unset = true;
+	}
+
+	else {
+		skip_len = 0; // not skip node or descendant of one
+	}
 
 	// fill in type field of setting
 
@@ -184,6 +203,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 		#undef OPAQUE_SETTING_TYPE_CASE
 	}
 
+	SETTING_TYPE_CASE(NODE)
 	SETTING_TYPE_CASE(STRING)
 
 	SETTING_TYPE_CASE(INT)
@@ -225,7 +245,7 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 
 	int name[CTL_MAXNAME + 2] = {
 		CTL_SYSCTL,
-		CTL_SYSCTL_NEXT, // TODO difference with CTL_SYSCTL_NEXTNOSKIP?
+		CTL_SYSCTL_NEXTNOSKIP, // as opposed to 'CTL_SYSCTL_NEXT', don't reject entries we must skip
 		CTL_KERN,
 	};
 
@@ -306,6 +326,29 @@ int setting_read(setting_t* setting) {
 
 	setting->descr = strdup(descr);
 
+	// read value (only when setting is not unset)
+	// 'sysctl(8)' multiplies this length by 2 "to be sure :-)", but I'm not sure why
+	// there's no reason 'sysctl(3)' would change its length between invocations, except maybe in the case of a race condition? idk, but I won't worry about this too much for now
+
+	if (setting->type == SETTINGS_TYPE_NODE) {
+		return 0;
+	}
+
+	setting->len = 0;
+
+	if (sysctl(setting->oid, setting->oid_len / sizeof(int), NULL, &setting->len, NULL, 0) < 0) {
+		return 0;
+	}
+
+	setting->data = malloc(setting->len + 1);
+
+	if (sysctl(setting->oid, setting->oid_len / sizeof(int), setting->data, &setting->len, NULL, 0) < 0) {
+		free(setting->data); // preemptively free this guy
+		setting->data = NULL;
+
+		return 0;
+	}
+
 	return 0;
 }
 
@@ -334,6 +377,10 @@ int setting_free(setting_t* setting) {
 
 	if (setting->descr) {
 		free(setting->descr);
+	}
+
+	if (setting->data) {
+		free(setting->data);
 	}
 
 	// 'sysctl' stuff

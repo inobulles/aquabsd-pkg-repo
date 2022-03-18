@@ -32,6 +32,7 @@ typedef enum {
 	// mirror 'CTLTYPE_*' from the sysctl MIB
 	// (these are still used by non-MIB settings, it's just the reason why there are so many different (read: redundant) types)
 
+	SETTINGS_TYPE_NODE,
 	SETTINGS_TYPE_STRING,
 
 	SETTINGS_TYPE_INT,
@@ -73,10 +74,15 @@ typedef struct {
 	char* key;
 	char* descr;
 
+	size_t len;
+	void* data;
+
 	// properties of the setting
 
 	settings_privilege_t privilege;
 	settings_type_t type;
+
+	bool unset; // currently, this setting is unset
 	bool writeable; // some settings are writeable at runtime, some not
 
 	// 'sysctl' specific stuff

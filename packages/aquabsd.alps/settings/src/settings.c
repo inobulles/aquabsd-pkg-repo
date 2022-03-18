@@ -41,8 +41,17 @@ static int do_list(opts_t* opts) {
 		setting_t* setting = settings[i];
 
 		if (opts->verbose) {
-			setting_read(setting);
-			printf("%s: %s\n", setting->key, setting->descr);
+			if (setting_read(setting) < 0) {
+				errx(EXIT_FAILURE, "setting_read: %s", settings_error_str());
+			}
+
+			printf("%s (%s): ", setting->key, setting->descr);
+
+			if (setting->type == SETTINGS_TYPE_STRING) {
+				printf("%s", (char*) setting->data);
+			}
+
+			printf("\n");
 		}
 
 		else {
@@ -71,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "bkuv")) >= 0) {
+	while ((c = getopt(argc, argv, "bkruv")) >= 0) {
 		// general options
 
 		if (c == 'v') {
