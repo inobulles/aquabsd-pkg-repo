@@ -1,5 +1,13 @@
 #include <settings.h>
 
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+
+#include <err.h>
+
+#include <sys/sysctl.h>
+
 static inline setting_t* __list_add(setting_t*** settings_ref, size_t* settings_len_ref) {
 	size_t settings_len = *settings_len_ref;
 
@@ -14,11 +22,14 @@ static inline setting_t* __list_add(setting_t*** settings_ref, size_t* settings_
 	return setting;
 }
 
-static inline int __query_sysctl(int query, oid, oid_len, void* buf, size_t* buf_len_ref)
+static inline int __query_sysctl(query, oid, oid_len, buf, buf_len_ref)
+	int query;
 	size_t oid_len;
 	int oid[oid_len];
+	void* buf;
+	size_t* buf_len_ref;
 {
-	int name[CTL_MAXNAME + 2] {
+	int name[CTL_MAXNAME + 2] = {
 		CTL_SYSCTL,
 		query,
 	};
@@ -32,7 +43,10 @@ static inline int __query_sysctl(int query, oid, oid_len, void* buf, size_t* buf
 	return 0;
 }
 
-static inline int __list_sysctl_fill(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege, oid_len, oid)
+static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, oid_len, oid)
+	setting_t*** settings_ref;
+	size_t* settings_len_ref;
+	settings_privilege_t privilege;
 	size_t oid_len;
 	int oid[oid_len];
 {
@@ -56,12 +70,19 @@ static inline int __list_sysctl_fill(setting_t*** settings_ref, size_t* settings
 	}
 
 	unsigned kind = *(unsigned*) buf;
+	char* fmt = (void*) (buf + sizeof kind);
+
 	bool tuneable = !(kind & CTLFLAG_TUN);
-	int type = kind & CTLFLAG_TUN;
 
 	if (privilege == SETTINGS_PRIVILEGE_BOOT && !tuneable) {
 		return 0;
 	}
+
+	if (privilege == SETTINGS_PRIVILEGE_KERN && tuneable) {
+		return 0;
+	}
+
+	int type = kind & CTLTYPE;
 
 	// actually add and fill in the setting
 
@@ -73,8 +94,63 @@ static inline int __list_sysctl_fill(setting_t*** settings_ref, size_t* settings
 
 	setting->key = strdup(name);
 	setting->privilege = privilege;
-	setting->type = type; // TODO convert to 'settings_type_t'
 	setting->tuneable = tuneable;
+
+	// fill in type field of setting
+
+	setting->type = SETTINGS_TYPE_OPAQUE;
+
+	#define SETTING_TYPE(name) \
+		else if (type == CTLTYPE_##name) { \
+			setting->type = SETTINGS_TYPE_##name; \
+		}
+
+	if (type == CTLTYPE_OPAQUE) {
+		#define OPAQUE_SETTING_TYPE(name, settings_type) \
+			else if (strcmp(fmt, (name)) == 0) { \
+				setting->type = SETTINGS_TYPE_##settings_type; \
+			}
+
+		if (0) {}
+
+		OPAQUE_SETTING_TYPE("S,clockinfo", CLOCKINFO)
+		OPAQUE_SETTING_TYPE("S,timeval",   TIMEVAL)
+		OPAQUE_SETTING_TYPE("S,loadavg",   LOADAVG)
+		OPAQUE_SETTING_TYPE("S,vmtotal",   VMTOTAL)
+		OPAQUE_SETTING_TYPE("S,input_id",  INPUT_ID)
+		OPAQUE_SETTING_TYPE("S,pagesizes", PAGESIZES)
+
+	#if defined(__amd64__)
+		OPAQUE_SETTING_TYPE("S,efi_map_header", EFI_MAP_HEADER)
+	#endif
+
+	#if defined(__amd64__) || defined(__i386__)
+		OPAQUE_SETTING_TYPE("S,bios_smap_xattr", BIOS_SMAP_XATTR)
+	#endif
+
+		#undef OPAQUE_SETTING_TYPE
+	}
+
+	SETTING_TYPE(STRING)
+
+	SETTING_TYPE(INT)
+	SETTING_TYPE(UINT)
+	SETTING_TYPE(LONG)
+	SETTING_TYPE(ULONG)
+
+	SETTING_TYPE(S8)
+	SETTING_TYPE(S16)
+	SETTING_TYPE(S32)
+	SETTING_TYPE(S64)
+
+	SETTING_TYPE(U8)
+	SETTING_TYPE(U16)
+	SETTING_TYPE(U32)
+	SETTING_TYPE(U64)
+
+	// anything else will already have been assigned to 'SETTINGS_TYPE_OPAQUE' previously
+
+	#undef SETTING_TYPE
 
 	return -1;
 }
@@ -97,7 +173,7 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 		int oid[22];
 		size_t oid_len = sizeof oid;
 
-		if (sysctl(name, name_len, oid, oid_len, 0, 0) < 0) {
+		if (sysctl(name, name_len, oid, &oid_len, 0, 0) < 0) {
 			if (errno == ENOENT) {
 				break;
 			}
@@ -109,13 +185,15 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 			break;
 		}
 
-		if (__list_sysctl_fill(settings_ref, settings_len_ref, oid, oid_len) < 0) {
+		if (__list_sysctl_fill(settings_ref, settings_len_ref, privilege, oid_len, oid) < 0) {
 			return -1;
 		}
 
 		memcpy(name + 2, oid, oid_len);
 		name_len += 2 + oid_len / sizeof(int);
 	}
+
+	return 0;
 }
 
 int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege, int user) {
@@ -139,7 +217,7 @@ error:
 	*settings_ref = settings;
 	*settings_len_ref = settings_len;
 
-	return -1; // TODO
+	return rv;
 }
 
 int setting_read(setting_t* setting, void** data_ref, size_t* len_ref) {
@@ -159,5 +237,13 @@ int setting_remove(setting_t* setting, settings_priority_t priority) {
 }
 
 int setting_free(setting_t* setting) {
-	return -1; // TODO
+	if (!setting) {
+		return -1;
+	}
+
+	if (setting->key) {
+		free(setting->key);
+	}
+
+	return 0;
 }
