@@ -1,3 +1,6 @@
+// TODO
+//  - consider the case of 'kern.arandom' and the '-B' flag
+
 #include <settings.h>
 
 #include <stdio.h>
@@ -37,7 +40,7 @@ static inline int __emit_error(char* fmt, char* data_primary, char* data_seconda
 	return -1;
 }
 
-static inline setting_t* __list_add(setting_t*** settings_ref, size_t* settings_len_ref) {
+static inline setting_t* __stack_add(setting_t*** settings_ref, size_t* settings_len_ref) {
 	size_t settings_len = *settings_len_ref;
 
 	setting_t** settings = realloc(*settings_ref, (settings_len + 1) * sizeof *settings);
@@ -51,15 +54,7 @@ static inline setting_t* __list_add(setting_t*** settings_ref, size_t* settings_
 	return setting;
 }
 
-// TODO should I really be using pre-ANSI style C declarations?
-
-static inline int __query_sysctl(query, oid, oid_len, buf, buf_len_ref)
-	int query;
-	size_t oid_len;
-	int oid[oid_len];
-	void* buf;
-	size_t* buf_len_ref;
-{
+static inline int __query_sysctl(int query, size_t oid_len, int* oid, size_t* buf_len_ref, void* buf) {
 	int name[CTL_MAXNAME + 2] = {
 		CTL_SYSCTL,
 		query,
@@ -89,29 +84,14 @@ static inline int __query_sysctl(query, oid, oid_len, buf, buf_len_ref)
 	return 0;
 }
 
-static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, oid_len, oid)
-	setting_t*** settings_ref;
-	size_t* settings_len_ref;
-	settings_privilege_t privilege;
-	size_t oid_len;
-	int* oid;
-{
-	// get name of sysctl from OID
-
-	char name[BUFSIZ];
-	size_t name_len = sizeof name;
-
-	if (__query_sysctl(CTL_SYSCTL_NAME, oid, oid_len, name, &name_len) < 0) {
-		return -1; // error already emitted
-	}
-
+static inline int __sysctl_fill(setting_t* setting, size_t oid_len, int* oid, settings_privilege_t privilege) {
 	// get sysctl OID format
 	// make sure it's a sysctl kind we actually care about, based on our privilege
 
 	uint8_t buf[BUFSIZ];
 	size_t buf_len = sizeof buf;
 
-	if (__query_sysctl(CTL_SYSCTL_OIDFMT, oid, oid_len, buf, &buf_len) < 0) {
+	if (__query_sysctl(CTL_SYSCTL_OIDFMT, oid_len, oid, &buf_len, buf) < 0) {
 		return -1; // error already emitted
 	}
 
@@ -121,27 +101,15 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	bool tuneable = !(kind & CTLFLAG_TUN);
 
 	if (privilege == SETTINGS_PRIVILEGE_BOOT && tuneable) {
-		return 0;
+		return -2;
 	}
 
 	if (privilege == SETTINGS_PRIVILEGE_KERN && !tuneable) {
-		return 0;
+		return -2;
 	}
 
-	bool writeable = kind & CTLFLAG_WR;
+	setting->writeable = kind & CTLFLAG_WR;
 	int type = kind & CTLTYPE;
-
-	// actually add and fill in the setting
-
-	setting_t* setting = __list_add(settings_ref, settings_len_ref);
-
-	if (!setting) {
-		return __emit_error("Failed to allocate 'setting_t' object ('__list_add')", NULL, NULL);
-	}
-
-	setting->key = strdup(name);
-	setting->privilege = privilege;
-	setting->writeable = writeable;
 
 	// 'sysctl' setting, so fill in 'setting_t.oid' & 'setting_t.oid_len'
 
@@ -249,8 +217,38 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 			break;
 		}
 
-		if (__list_sysctl_fill(settings_ref, settings_len_ref, privilege, oid_len, oid) < 0) {
+		// get key of sysctl from OID
+
+		char key[BUFSIZ];
+		size_t key_len = sizeof key;
+
+		if (__query_sysctl(CTL_SYSCTL_NAME, oid_len, oid, &key_len, key) < 0) {
 			goto error; // error already emitted
+		}
+
+		// add setting
+
+		setting_t* setting = __stack_add(settings_ref, settings_len_ref);
+
+		if (!setting) {
+			__emit_error("Failed to allocate 'setting_t' object ('__stack_add')", NULL, NULL);
+			goto error;
+		}
+
+		// fill setting
+
+		setting->key = strdup(key);
+		int rv = __sysctl_fill(setting, oid_len, oid, privilege);
+
+		if (rv < 0) {
+			// pop setting back off settings stack
+
+			(*settings_len_ref)--;
+			free(setting);
+
+			if (rv > -2) {
+				goto error; // error already emitted
+			}
 		}
 
 		memcpy(name + 2, oid, oid_len);
@@ -281,11 +279,11 @@ int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_
 	}
 
 	else if (privilege == SETTINGS_PRIVILEGE_USER) {
-		return __emit_error("settings_list: Unimplemented privilege level (USER)", NULL, NULL);
+		return __emit_error("settings_list: Unimplemented privilege level (SETTINGS_PRIVILEGE_USER)", NULL, NULL);
 	}
 
 	else if (privilege == SETTINGS_PRIVILEGE_AQUA) {
-		return __emit_error("settings_list: Unimplemented privilege level (AQUA)", NULL, NULL);
+		return __emit_error("settings_list: Unimplemented privilege level (SETTINGS_PRIVILEGE_AQUA)", NULL, NULL);
 	}
 
 	else {
@@ -295,11 +293,67 @@ int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_
 	return 0;
 }
 
+static inline setting_t* __search_sysctl(const char* key, settings_privilege_t privilege) {
+	int mib[CTL_MAXNAME];
+	size_t mib_len = sizeof mib;
+
+	int oid[] = {
+		CTL_SYSCTL,
+		CTL_SYSCTL_NAME2OID,
+	};
+
+	if (sysctl(oid, 2, mib, &mib_len, key, strlen(key)) < 0) {
+		__emit_error("sysctl(NAME2OID): %s", strerror(errno), NULL);
+		return NULL;
+	}
+
+	// if (sysctlnametomib(key, oid, &oid_len) < 0) {
+	// 	__emit_error("sysctlnametomib: %s", strerror(errno), NULL);
+	// 	return NULL;
+	// }
+
+	setting_t* setting = calloc(1, sizeof *setting);
+	setting->key = strdup(key);
+
+	if (__sysctl_fill(setting, mib_len, mib, privilege) < 0) {
+		free(setting);
+		return NULL; // in the case where this is returning NULL because of an error: error already emitted
+	}
+
+	return setting;
+}
+
+setting_t* settings_search(const char* key, settings_privilege_t privilege, int user) {
+	if (privilege == SETTINGS_PRIVILEGE_BOOT || privilege == SETTINGS_PRIVILEGE_KERN) {
+		return __search_sysctl(key, privilege); // in case of error: error already emitted
+	}
+
+	else if (privilege == SETTINGS_PRIVILEGE_USER) {
+		__emit_error("settings_list: Unimplemented privilege level (SETTINGS_PRIVILEGE_USER)", NULL, NULL);
+		return NULL;
+	}
+
+	else if (privilege == SETTINGS_PRIVILEGE_AQUA) {
+		__emit_error("settings_list: Unimplemented privilege level (SETTINGS_PRIVILEGE_AQUA)", NULL, NULL);
+		return NULL;
+	}
+
+	else {
+		__emit_error("settings_list: Unknown privilege level", NULL, NULL);
+		return NULL;
+	}
+
+	return NULL;
+}
+
+// TODO the following two functions are 100% sysctl specific
+//      make this generic to work for other privilege levels
+
 int setting_read_descr(setting_t* setting) {
 	char descr[BUFSIZ];
 	size_t descr_len = sizeof descr;
 
-	if (__query_sysctl(CTL_SYSCTL_OIDDESCR, setting->oid, setting->oid_len, descr, &descr_len) < 0) {
+	if (__query_sysctl(CTL_SYSCTL_OIDDESCR, setting->oid_len, setting->oid, &descr_len, descr) < 0) {
 		return -1; // error already emitted
 	}
 

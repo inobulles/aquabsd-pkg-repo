@@ -23,7 +23,15 @@ static void __dead2 usage(void) {
 }
 
 typedef struct {
+	// general options
+
 	bool verbose;
+
+	// action options
+
+	char* read;
+
+	// privilege & user options
 
 	settings_privilege_t privilege;
 	int user;
@@ -40,22 +48,14 @@ static int do_list(opts_t* opts) {
 	for (int i = 0; i < settings_len; i++) {
 		setting_t* setting = settings[i];
 
+		// if verbose option set, print out setting description too
+
 		if (opts->verbose) {
 			if (setting_read_descr(setting) < 0) {
 				errx(EXIT_FAILURE, "setting_read_descr: %s", settings_error_str());
 			}
 
-			if (setting_read(setting) < 0) {
-				errx(EXIT_FAILURE, "setting_read: %s", settings_error_str());
-			}
-
-			printf("%s (%s): ", setting->key, setting->descr);
-
-			if (setting->type == SETTINGS_TYPE_STRING) {
-				printf("%s", (char*) setting->data);
-			}
-
-			printf("\n");
+			printf("%s (%s)\n", setting->key, setting->descr);
 		}
 
 		else {
@@ -63,6 +63,38 @@ static int do_list(opts_t* opts) {
 		}
 
 		setting_free(setting);
+	}
+
+	return 0;
+}
+
+static int do_read(opts_t* opts) {
+	setting_t* setting = settings_search(opts->read, opts->privilege, opts->user);
+
+	if (!setting) {
+		errx(EXIT_FAILURE, "settings_search: %s", settings_error_str());
+	}
+
+	if (opts->verbose && setting_read_descr(setting) < 0) {
+		errx(EXIT_FAILURE, "setting_read_descr: %s", settings_error_str());
+	}
+
+	if (setting_read(setting) < 0) {
+		errx(EXIT_FAILURE, "setting_read: %s", settings_error_str());
+	}
+
+	// TODO think of an option for raw output (sysctl's -b) (which obviously exclused 'opts->verbose')
+
+	if (opts->verbose) {
+		printf("%s: ", setting->descr);
+	}
+
+	if (setting->type == SETTINGS_TYPE_STRING) {
+		printf("%s\n", (char*) setting->data);
+	}
+
+	else {
+		errx(EXIT_FAILURE, "Unsupported type: %d", setting->type);
 	}
 
 	return 0;
@@ -84,11 +116,18 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "bkruv")) >= 0) {
+	while ((c = getopt(argc, argv, "bkr:uv")) >= 0) {
 		// general options
 
 		if (c == 'v') {
 			opts.verbose = true;
+		}
+
+		// action options
+
+		else if (c == 'r') {
+			opts.read = optarg;
+			action = do_read;
 		}
 
 		// privilege options

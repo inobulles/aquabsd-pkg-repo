@@ -99,6 +99,11 @@ char* settings_error_str(void);
 
 int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege, int user);
 
+// search for a specific setting by key, privilege level, and user
+// read the description for 'settings_list' for more information on the 'privilege' & 'user' parameters
+
+setting_t* settings_search(const char* key, settings_privilege_t privilege, int user);
+
 // read the description or data from a 'setting_t' object
 
 int setting_read_descr(setting_t* setting);
