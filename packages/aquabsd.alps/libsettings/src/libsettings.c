@@ -199,7 +199,19 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	return 0;
 }
 
+static inline void __free_settings(setting_t** settings, size_t settings_len) {
+	for (int i = 0; i < settings_len; i++) {
+		setting_t* setting = settings[i];
+		setting_free(setting);
+	}
+
+	free(settings);
+}
+
 static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege) {
+	*settings_ref = NULL;
+	*settings_len_ref = 0;
+
 	// taking heavily from 'sysctl_all' in 'sbin/sysctl/sysctl.c'
 
 	int name[CTL_MAXNAME + 2] = {
@@ -207,8 +219,6 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 		CTL_SYSCTL_NEXT, // TODO difference with CTL_SYSCTL_NEXTNOSKIP?
 		CTL_KERN,
 	};
-
-	// TODO free settings list if there's an error
 
 	size_t name_len = 3;
 
@@ -221,7 +231,8 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 				break;
 			}
 
-			return __emit_error("sysctl(getnext): %s", strerror(errno), NULL);
+			__emit_error("sysctl(getnext): %s", strerror(errno), NULL);
+			goto error;
 		}
 
 		if (oid_len < 0) {
@@ -229,7 +240,7 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 		}
 
 		if (__list_sysctl_fill(settings_ref, settings_len_ref, privilege, oid_len, oid) < 0) {
-			return -1; // error already emitted
+			goto error; // error already emitted
 		}
 
 		memcpy(name + 2, oid, oid_len);
@@ -237,28 +248,35 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 	}
 
 	return 0;
+
+error:
+
+	__free_settings(*settings_ref, *settings_len_ref);
+
+	*settings_ref = NULL;
+	*settings_len_ref = 0;
+
+	return -1;
 }
 
 int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege, int user) {
+	if (!settings_ref || !settings_len_ref) {
+		return __emit_error("settings_list: passed references point to NULL", NULL, NULL);
+	}
+
 	int rv = -1;
 
-	setting_t** settings = NULL;
-	size_t settings_len = 0;
-
 	if (privilege == SETTINGS_PRIVILEGE_BOOT || privilege == SETTINGS_PRIVILEGE_KERN) {
-		if (__list_sysctl(&settings, &settings_len, privilege) < 0) {
+		if (__list_sysctl(settings_ref, settings_len_ref, privilege) < 0) {
 			goto error;
 		}
 	}
 
-	// success;
+	// success
 
 	rv = 0;
 
 error:
-
-	*settings_ref = settings;
-	*settings_len_ref = settings_len;
 
 	return rv;
 }
