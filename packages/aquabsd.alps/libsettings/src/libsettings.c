@@ -295,9 +295,7 @@ int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_
 	return 0;
 }
 
-int setting_read(setting_t* setting) {
-	// read description
-
+int setting_read_descr(setting_t* setting) {
 	char descr[BUFSIZ];
 	size_t descr_len = sizeof descr;
 
@@ -307,7 +305,10 @@ int setting_read(setting_t* setting) {
 
 	setting->descr = strdup(descr);
 
-	// read value
+	return 0;
+}
+
+int setting_read(setting_t* setting) {
 	// 'sysctl(8)' multiplies this length by 2 "to be sure :-)", but I'm not sure why
 	// there's no reason 'sysctl(3)' would change its length between invocations, except maybe in the case of a race condition? idk, but I won't worry about this too much for now
 

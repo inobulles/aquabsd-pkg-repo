@@ -41,6 +41,10 @@ static int do_list(opts_t* opts) {
 		setting_t* setting = settings[i];
 
 		if (opts->verbose) {
+			if (setting_read_descr(setting) < 0) {
+				errx(EXIT_FAILURE, "setting_read_descr: %s", settings_error_str());
+			}
+
 			if (setting_read(setting) < 0) {
 				errx(EXIT_FAILURE, "setting_read: %s", settings_error_str());
 			}
