@@ -149,25 +149,6 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	setting->oid = malloc(oid_len * sizeof *oid);
 	memcpy(setting->oid, oid, oid_len * sizeof *oid);
 
-	// should we skip this one?
-	// we keep track of encountered skip nodes to ignore descendents too
-
-	static int skip_len = 0;
-	static int skip_oid[CTL_MAXNAME];
-
-	if ((kind & CTLFLAG_SKIP) && (!skip_len || skip_len >= oid_len)) {
-		skip_len = oid_len;
-		memcpy(skip_oid, oid, skip_len);
-	}
-
-	if (0 < skip_len && skip_len <= oid_len && memcmp(skip_oid, oid, skip_len) == 0) {
-		setting->unset = true;
-	}
-
-	else {
-		skip_len = 0; // not skip node or descendant of one
-	}
-
 	// fill in type field of setting
 
 	setting->type = SETTINGS_TYPE_OPAQUE;
@@ -326,13 +307,9 @@ int setting_read(setting_t* setting) {
 
 	setting->descr = strdup(descr);
 
-	// read value (only when setting is not unset)
+	// read value
 	// 'sysctl(8)' multiplies this length by 2 "to be sure :-)", but I'm not sure why
 	// there's no reason 'sysctl(3)' would change its length between invocations, except maybe in the case of a race condition? idk, but I won't worry about this too much for now
-
-	if (setting->type == SETTINGS_TYPE_NODE) {
-		return 0;
-	}
 
 	setting->len = 0;
 

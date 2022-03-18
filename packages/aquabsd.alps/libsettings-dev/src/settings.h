@@ -81,8 +81,6 @@ typedef struct {
 
 	settings_privilege_t privilege;
 	settings_type_t type;
-
-	bool unset; // currently, this setting is unset
 	bool writeable; // some settings are writeable at runtime, some not
 
 	// 'sysctl' specific stuff
