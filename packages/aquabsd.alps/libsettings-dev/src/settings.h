@@ -1,6 +1,8 @@
 #if !defined(__AQUABSD__SETTINGS)
 #define __AQUABSD__SETTINGS
 
+#include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 typedef enum {
@@ -20,7 +22,7 @@ typedef enum {
 	SETTINGS_PRIORITY_IMMEDIATE,
 } settings_priority_t;
 
-typedef struct {
+typedef enum {
 	// these are "raw" settings, which aren't really meant for users to touch
 	// rather, its specialized programs which will know how to deal with this data
 	// these programs could either be users of libsettings, or the underlying sysctl library (e.g., 'ps', 'systat', 'netstat')
@@ -73,13 +75,15 @@ typedef struct {
 	bool tuneable; // some settings are runtime tuneable, some not
 } setting_t;
 
-// allocate a flat list of 'setting_t' objects in 'settings_ref' & 'settings_len_ref'
+char* settings_error_str(void);
+
+// allocate a flat list of 'setting_t*' objects in 'settings_ref' & 'settings_len_ref'
 // 'privilege' specifies which setting privilege level we're targetting
 // for emulating sysctl functionality, use either 'SETTINGS_PRIVILEGE_BOOT' or 'SETTINGS_PRIVILEGE_KERN'
 // 'user' specifies which user to run this as (only applicable if 'privilege' is either 'SETTINGS_PRIVILEGE_USER' or 'SETTINGS_PRIVILEGE_AQUA')
 // 'user == -1' uses the current effective user
 
-int settings_list(setting_t** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege, int user);
+int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege, int user);
 
 // read the data from a 'setting_t' object in 'data_ref' & 'len_ref'
 

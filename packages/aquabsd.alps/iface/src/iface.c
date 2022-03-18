@@ -7,14 +7,14 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
+#include <iface.h>
+
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <iface.h>
 
 static void __dead2 usage(void) {
 	fprintf(stderr,
@@ -25,7 +25,7 @@ static void __dead2 usage(void) {
 		"       %1$s [-hv] -u [-i id] [-n filename] [-m modname]\n",
 	getprogname());
 
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 typedef struct {
@@ -53,7 +53,7 @@ static int do_stat(opts_t* opts) {
 	if (opts->iface) {
 		return __stat_iface(opts, opts->iface);
 	}
-	
+
 	for (int i = 0; i < opts->iface_len; i++) {
 		iface_t* iface = &opts->ifaces[i];
 		__stat_iface(opts, iface);
@@ -118,16 +118,15 @@ int main(int argc, char* argv[]) {
 	// options
 
 	action_t action = do_stat;
-
 	opts_t opts = { 0 };
-	
+
 	// get options
 
 	char* name = NULL;
 
 	int c;
 
-	while ((c = getopt(argc, argv, "a:r:i:")) != -1) {
+	while ((c = getopt(argc, argv, "a:r:i:")) >= 0) {
 		// general options
 
 		if (c == 'i') {

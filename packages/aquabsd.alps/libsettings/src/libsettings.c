@@ -8,6 +8,35 @@
 
 #include <sys/sysctl.h>
 
+static char* error_str = NULL;
+
+char* settings_error_str(void) {
+	return error_str;
+}
+
+static inline int __emit_error(char* fmt, char* data_primary, char* data_secondary) {
+	if (error_str) {
+		free(error_str);
+	}
+
+	// a lot of these calls allocate a bit of memory on the heap
+	// it's not a big deal though, as repeated calls to '__emit_error' know to cleanup the previous (i.e. no risk of memory leak)
+
+	if (data_primary && data_secondary) {
+		asprintf(&error_str, fmt, data_primary, data_secondary);
+	}
+
+	else if (data_primary) {
+		asprintf(&error_str, fmt, data_primary);
+	}
+
+	else {
+		error_str = strdup(fmt);
+	}
+
+	return -1;
+}
+
 static inline setting_t* __list_add(setting_t*** settings_ref, size_t* settings_len_ref) {
 	size_t settings_len = *settings_len_ref;
 
@@ -36,8 +65,22 @@ static inline int __query_sysctl(query, oid, oid_len, buf, buf_len_ref)
 
 	memcpy(name + 2, oid, oid_len);
 
-	if (sysctl(name, oid_len + 2, buf, buf_len_ref, 0, 0) < 0) {
-		errx(EXIT_FAILURE, "sysctl(query %d): %s", query, strerror(errno));
+	if (sysctl(name, oid_len / sizeof(int) + 2, buf, buf_len_ref, 0, 0) < 0) {
+		char* query_name = "UNKNOWN";
+
+		#define QUERY_CASE(name) \
+			if (query == (name)) { \
+				query_name = #name; \
+			}
+
+		if (0) {}
+
+		QUERY_CASE(CTL_SYSCTL_NAME)
+		QUERY_CASE(CTL_SYSCTL_OIDFMT)
+
+		#undef QUERY_CASE
+
+		return __emit_error("sysctl(query %s): %s", query_name, strerror(errno));
 	}
 
 	return 0;
@@ -56,7 +99,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	size_t name_len = sizeof name;
 
 	if (__query_sysctl(CTL_SYSCTL_NAME, oid, oid_len, name, &name_len) < 0) {
-		return -1;
+		return -1; // error already emitted
 	}
 
 	// get sysctl OID format
@@ -66,7 +109,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	size_t buf_len = sizeof buf;
 
 	if (__query_sysctl(CTL_SYSCTL_OIDFMT, oid, oid_len, buf, &buf_len) < 0) {
-		return -1;
+		return -1; // error already emitted
 	}
 
 	unsigned kind = *(unsigned*) buf;
@@ -74,11 +117,11 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 
 	bool tuneable = !(kind & CTLFLAG_TUN);
 
-	if (privilege == SETTINGS_PRIVILEGE_BOOT && !tuneable) {
+	if (privilege == SETTINGS_PRIVILEGE_BOOT && tuneable) {
 		return 0;
 	}
 
-	if (privilege == SETTINGS_PRIVILEGE_KERN && tuneable) {
+	if (privilege == SETTINGS_PRIVILEGE_KERN && !tuneable) {
 		return 0;
 	}
 
@@ -89,7 +132,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 	setting_t* setting = __list_add(settings_ref, settings_len_ref);
 
 	if (!setting) {
-		return -1;
+		return __emit_error("Failed to allocate 'setting_t' object ('__list_add')", NULL, NULL);
 	}
 
 	setting->key = strdup(name);
@@ -100,77 +143,76 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 
 	setting->type = SETTINGS_TYPE_OPAQUE;
 
-	#define SETTING_TYPE(name) \
+	#define SETTING_TYPE_CASE(name) \
 		else if (type == CTLTYPE_##name) { \
 			setting->type = SETTINGS_TYPE_##name; \
 		}
 
 	if (type == CTLTYPE_OPAQUE) {
-		#define OPAQUE_SETTING_TYPE(name, settings_type) \
+		#define OPAQUE_SETTING_TYPE_CASE(name, settings_type) \
 			else if (strcmp(fmt, (name)) == 0) { \
 				setting->type = SETTINGS_TYPE_##settings_type; \
 			}
 
 		if (0) {}
 
-		OPAQUE_SETTING_TYPE("S,clockinfo", CLOCKINFO)
-		OPAQUE_SETTING_TYPE("S,timeval",   TIMEVAL)
-		OPAQUE_SETTING_TYPE("S,loadavg",   LOADAVG)
-		OPAQUE_SETTING_TYPE("S,vmtotal",   VMTOTAL)
-		OPAQUE_SETTING_TYPE("S,input_id",  INPUT_ID)
-		OPAQUE_SETTING_TYPE("S,pagesizes", PAGESIZES)
+		OPAQUE_SETTING_TYPE_CASE("S,clockinfo", CLOCKINFO)
+		OPAQUE_SETTING_TYPE_CASE("S,timeval",   TIMEVAL)
+		OPAQUE_SETTING_TYPE_CASE("S,loadavg",   LOADAVG)
+		OPAQUE_SETTING_TYPE_CASE("S,vmtotal",   VMTOTAL)
+		OPAQUE_SETTING_TYPE_CASE("S,input_id",  INPUT_ID)
+		OPAQUE_SETTING_TYPE_CASE("S,pagesizes", PAGESIZES)
 
 	#if defined(__amd64__)
-		OPAQUE_SETTING_TYPE("S,efi_map_header", EFI_MAP_HEADER)
+		OPAQUE_SETTING_TYPE_CASE("S,efi_map_header", EFI_MAP_HEADER)
 	#endif
 
 	#if defined(__amd64__) || defined(__i386__)
-		OPAQUE_SETTING_TYPE("S,bios_smap_xattr", BIOS_SMAP_XATTR)
+		OPAQUE_SETTING_TYPE_CASE("S,bios_smap_xattr", BIOS_SMAP_XATTR)
 	#endif
 
-		#undef OPAQUE_SETTING_TYPE
+		#undef OPAQUE_SETTING_TYPE_CASE
 	}
 
-	SETTING_TYPE(STRING)
+	SETTING_TYPE_CASE(STRING)
 
-	SETTING_TYPE(INT)
-	SETTING_TYPE(UINT)
-	SETTING_TYPE(LONG)
-	SETTING_TYPE(ULONG)
+	SETTING_TYPE_CASE(INT)
+	SETTING_TYPE_CASE(UINT)
+	SETTING_TYPE_CASE(LONG)
+	SETTING_TYPE_CASE(ULONG)
 
-	SETTING_TYPE(S8)
-	SETTING_TYPE(S16)
-	SETTING_TYPE(S32)
-	SETTING_TYPE(S64)
+	SETTING_TYPE_CASE(S8)
+	SETTING_TYPE_CASE(S16)
+	SETTING_TYPE_CASE(S32)
+	SETTING_TYPE_CASE(S64)
 
-	SETTING_TYPE(U8)
-	SETTING_TYPE(U16)
-	SETTING_TYPE(U32)
-	SETTING_TYPE(U64)
+	SETTING_TYPE_CASE(U8)
+	SETTING_TYPE_CASE(U16)
+	SETTING_TYPE_CASE(U32)
+	SETTING_TYPE_CASE(U64)
 
 	// anything else will already have been assigned to 'SETTINGS_TYPE_OPAQUE' previously
 
-	#undef SETTING_TYPE
+	#undef SETTING_TYPE_CASE
 
-	return -1;
+	return 0;
 }
 
 static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_ref, settings_privilege_t privilege) {
 	// taking heavily from 'sysctl_all' in 'sbin/sysctl/sysctl.c'
 
-	int name[22] = {
+	int name[CTL_MAXNAME + 2] = {
 		CTL_SYSCTL,
 		CTL_SYSCTL_NEXT, // TODO difference with CTL_SYSCTL_NEXTNOSKIP?
 		CTL_KERN,
 	};
 
-	// TODO make sure all this * & / by 'sizeof(int)' is correct here because this seems sus
-	//      AFAICT, 'oid_len' should be byte count because 'sysctl's 'oldp' (is this a typo for 'oidp'?) expects an untyped pointer
+	// TODO free settings list if there's an error
 
 	size_t name_len = 3;
 
 	while (1) {
-		int oid[22];
+		int oid[CTL_MAXNAME];
 		size_t oid_len = sizeof oid;
 
 		if (sysctl(name, name_len, oid, &oid_len, 0, 0) < 0) {
@@ -178,7 +220,7 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 				break;
 			}
 
-			errx(EXIT_FAILURE, "sysctl(getnext) %zu", oid_len);
+			return __emit_error("sysctl(getnext): %s", strerror(errno), NULL);
 		}
 
 		if (oid_len < 0) {
@@ -186,11 +228,11 @@ static inline int __list_sysctl(setting_t*** settings_ref, size_t* settings_len_
 		}
 
 		if (__list_sysctl_fill(settings_ref, settings_len_ref, privilege, oid_len, oid) < 0) {
-			return -1;
+			return -1; // error already emitted
 		}
 
 		memcpy(name + 2, oid, oid_len);
-		name_len += 2 + oid_len / sizeof(int);
+		name_len = 2 + oid_len / sizeof(int);
 	}
 
 	return 0;

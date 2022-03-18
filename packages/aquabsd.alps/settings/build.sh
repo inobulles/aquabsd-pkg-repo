@@ -7,9 +7,11 @@ rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR/package/bin/
 
 # build the package files
-# TODO remove debugging flag
 
-cc -std=c99 -g src/settings.c -o $BUILD_DIR/package/bin/settings -L/lib -lsettings
+# TODO remove debugging flag
+# TODO remove second library path
+
+cc -std=c99 -g src/settings.c -o $BUILD_DIR/package/bin/settings -L/lib -L../libsettings/.build/package/lib -lsettings
 
 # create the package tarball
 
