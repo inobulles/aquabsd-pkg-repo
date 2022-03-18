@@ -294,7 +294,7 @@ int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_
 	return 0;
 }
 
-int setting_read(setting_t* setting, void** data_ref, size_t* len_ref) {
+int setting_read(setting_t* setting) {
 	// read description
 
 	char descr[BUFSIZ];

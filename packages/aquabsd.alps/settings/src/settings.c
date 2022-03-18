@@ -41,7 +41,7 @@ static int do_list(opts_t* opts) {
 		setting_t* setting = settings[i];
 
 		if (opts->verbose) {
-			setting_read(setting, NULL, NULL);
+			setting_read(setting);
 			printf("%s: %s\n", setting->key, setting->descr);
 		}
 

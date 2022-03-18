@@ -97,7 +97,7 @@ int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_
 
 // read the data from a 'setting_t' object in 'data_ref' & 'len_ref'
 
-int setting_read(setting_t* setting, void** data_ref, size_t* len_ref);
+int setting_read(setting_t* setting);
 
 // write the data in 'data' & 'len' to a 'setting_t' object
 
