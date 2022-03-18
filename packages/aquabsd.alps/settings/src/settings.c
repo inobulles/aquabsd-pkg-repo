@@ -23,6 +23,8 @@ static void __dead2 usage(void) {
 }
 
 typedef struct {
+	bool verbose;
+
 	settings_privilege_t privilege;
 	int user;
 } opts_t;
@@ -38,7 +40,14 @@ static int do_list(opts_t* opts) {
 	for (int i = 0; i < settings_len; i++) {
 		setting_t* setting = settings[i];
 
-		printf("%s\n", setting->key);
+		if (opts->verbose) {
+			setting_read(setting, NULL, NULL);
+			printf("%s: %s\n", setting->key, setting->descr);
+		}
+
+		else {
+			printf("%s\n", setting->key);
+		}
 
 		setting_free(setting);
 	}
@@ -62,12 +71,16 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "bku")) >= 0) {
+	while ((c = getopt(argc, argv, "bkuv")) >= 0) {
 		// general options
+
+		if (c == 'v') {
+			opts.verbose = true;
+		}
 
 		// privilege options
 
-		if (c == 'b') {
+		else if (c == 'b') {
 			opts.privilege = SETTINGS_PRIVILEGE_BOOT;
 		}
 
