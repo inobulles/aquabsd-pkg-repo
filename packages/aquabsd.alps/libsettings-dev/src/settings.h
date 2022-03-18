@@ -72,7 +72,7 @@ typedef struct {
 
 	settings_privilege_t privilege;
 	settings_type_t type;
-	bool tuneable; // some settings are runtime tuneable, some not
+	bool writeable; // some settings are writeable at runtime, some not
 } setting_t;
 
 char* settings_error_str(void);

@@ -125,6 +125,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 		return 0;
 	}
 
+	bool writeable = kind & CTLFLAG_WR;
 	int type = kind & CTLTYPE;
 
 	// actually add and fill in the setting
@@ -137,7 +138,7 @@ static inline int __list_sysctl_fill(settings_ref, settings_len_ref, privilege, 
 
 	setting->key = strdup(name);
 	setting->privilege = privilege;
-	setting->tuneable = tuneable;
+	setting->writeable = writeable;
 
 	// fill in type field of setting
 
