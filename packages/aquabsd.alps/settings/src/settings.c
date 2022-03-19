@@ -26,6 +26,7 @@ typedef struct {
 	// general options
 
 	bool verbose;
+	bool binary;
 
 	// action options
 
@@ -87,7 +88,10 @@ static int do_read(opts_t* opts) {
 		errx(EXIT_FAILURE, "setting_read: %s", settings_error_str());
 	}
 
-	// TODO think of an option for raw output (sysctl's -b) (which obviously exclused 'opts->verbose')
+	if (opts->binary) {
+		fwrite(setting->data, 1, setting->len, stdout);
+		return 0;
+	}
 
 	if (opts->verbose) {
 		printf("%s: ", setting->descr);
@@ -120,10 +124,14 @@ int main(int argc, char* argv[]) {
 
 	int c;
 
-	while ((c = getopt(argc, argv, "bkr:uv")) >= 0) {
+	while ((c = getopt(argc, argv, "bBkr:uv")) >= 0) {
 		// general options
 
-		if (c == 'v') {
+		if (c == 'B') {
+			opts.binary = true;
+		}
+
+		else if (c == 'v') {
 			opts.verbose = true;
 		}
 
