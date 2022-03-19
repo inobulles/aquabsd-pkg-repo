@@ -75,6 +75,10 @@ static int do_read(opts_t* opts) {
 		errx(EXIT_FAILURE, "settings_search: %s", settings_error_str());
 	}
 
+	if (setting->privilege != opts->privilege) {
+		errx(EXIT_FAILURE, "settings_search: Incorrect privileges");
+	}
+
 	if (opts->verbose && setting_read_descr(setting) < 0) {
 		errx(EXIT_FAILURE, "setting_read_descr: %s", settings_error_str());
 	}

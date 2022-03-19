@@ -98,14 +98,16 @@ static inline int __sysctl_fill(setting_t* setting, size_t oid_len, int* oid, se
 	uint32_t kind = *(uint32_t*) buf;
 	char* fmt = (void*) (buf + sizeof kind);
 
-	bool tuneable = !(kind & CTLFLAG_TUN);
-
-	if (privilege == SETTINGS_PRIVILEGE_BOOT && tuneable) {
-		return -2;
+	if (kind & CTLFLAG_TUN) {
+		setting->privilege = SETTINGS_PRIVILEGE_BOOT;
 	}
 
-	if (privilege == SETTINGS_PRIVILEGE_KERN && !tuneable) {
-		return -2;
+	else {
+		setting->privilege = SETTINGS_PRIVILEGE_KERN;
+	}
+
+	if (setting->privilege != privilege) {
+		return 0;
 	}
 
 	setting->writeable = kind & CTLFLAG_WR;
@@ -296,6 +298,8 @@ int settings_list(setting_t*** settings_ref, size_t* settings_len_ref, settings_
 static inline setting_t* __search_sysctl(const char* key, settings_privilege_t privilege) {
 	int mib[CTL_MAXNAME];
 	size_t mib_len = sizeof mib;
+
+	// TODO as the comment in 'sysctl.c' says, don't, please, just don't
 
 	int oid[] = {
 		CTL_SYSCTL,
