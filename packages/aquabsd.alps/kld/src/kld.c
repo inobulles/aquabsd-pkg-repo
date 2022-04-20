@@ -40,7 +40,7 @@ static void __dead2 usage(void) {
 		"       %1$s [-hv] -u [-i id] [-n filename] [-m modname]\n",
 	getprogname());
 
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 typedef struct {
@@ -345,7 +345,7 @@ int main(int argc, char* argv[]) {
 	// options
 
 	action_t action = do_stat;
-	
+
 	opts_t opts = { 0 };
 	opts.id = -1;
 
