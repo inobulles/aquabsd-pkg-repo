@@ -16,7 +16,7 @@ cp src/copyfile.h $BUILD_DIR/package/usr/include/
 # build the package files
 
 cc -Wall -std=c99 -fPIC -c src/copyfile.c -o $BUILD_DIR/copyfile.o
-ld -shared $BUILD_DIR/copyfile.o -o $BUILD_DIR/package/usr/lib/libcopyfile.so
+cc -shared $BUILD_DIR/copyfile.o -o $BUILD_DIR/package/usr/lib/libcopyfile.so
 
 ar rc $BUILD_DIR/package/usr/lib/libcopyfile.a $BUILD_DIR/copyfile.o
 ranlib $BUILD_DIR/package/usr/lib/libcopyfile.a
