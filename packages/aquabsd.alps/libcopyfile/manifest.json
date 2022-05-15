@@ -1,7 +1,7 @@
 {
 	"name": "libcopyfile",
 	"origin": "aquabsd.alps/libcopyfile",
-	"version": "0222a",
+	"version": "0522a",
 	"comment": "Library for copying files",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://opensource.apple.com/source/copyfile",

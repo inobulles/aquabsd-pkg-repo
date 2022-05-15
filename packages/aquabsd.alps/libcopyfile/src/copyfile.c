@@ -213,6 +213,8 @@ do { \
 	COPYFILE_SET_FNAME(src, s);
 	COPYFILE_SET_FNAME(dst, s);
 
+
+
 	if ((ret = copyfile_open(s)) < 0)
 	goto error_exit;
 
@@ -392,26 +394,33 @@ static int copyfile_open(copyfile_state_t s)
 
 	if (s->src && s->src_fd == -2)
 	{
-	/* prevent copying on unsupported types */
-	switch (s->sb.st_mode & S_IFMT)
-	{
-		case S_IFDIR:
-		isdir = 1;
-		break;
-		case S_IFREG:
-		break;
-		default:
-		errno = ENOTSUP;
-		return -1;
-	}
+		// on macOS, depending on if the the COPYFILE_NOFOLLOW_SRC flag is set, either lstatx_np or statx_np will be called instead
+		// but aquaBSD doesn't have such functions in its standard library, so I'll have to come back to this and rewrite copyfile_open "properly"
 
-	if ((s->src_fd = open(s->src, O_RDONLY | osrc , 0)) < 0)
-	{
-		copyfile_warn("open on %s", s->src);
-		return -1;
-	} else
-		copyfile_debug(2, "open successful on source (%s)", s->src);
+		if (stat(s->src, &s->sb) < 0) {
+			copyfile_warn("stat on %s", s->src);
+			return -1;
+		}
 
+		/* prevent copying on unsupported types */
+		switch (s->sb.st_mode & S_IFMT)
+		{
+			case S_IFDIR:
+			isdir = 1;
+			break;
+			case S_IFREG:
+			break;
+			default:
+			errno = ENOTSUP;
+			return -1;
+		}
+
+		if ((s->src_fd = open(s->src, O_RDONLY | osrc , 0)) < 0)
+		{
+			copyfile_warn("open on %s", s->src);
+			return -1;
+		} else
+			copyfile_debug(2, "open successful on source (%s)", s->src);
 	}
 
 	if (s->dst && s->dst_fd == -2)
