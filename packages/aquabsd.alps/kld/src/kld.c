@@ -291,7 +291,7 @@ path_validated: {} // I still don't understand why labels can't have a declarati
 	// something went wrong
 
 	if (errno == EEXIST) {
-		warnx("can't load %s: module already loaded or in kernel\n", name);
+		warnx("can't load %s: module already loaded or in kernel", name);
 	}
 
 	else if (errno == ENOEXEC) {
