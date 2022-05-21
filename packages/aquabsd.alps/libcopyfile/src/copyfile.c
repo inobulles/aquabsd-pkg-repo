@@ -394,7 +394,7 @@ static int copyfile_open(copyfile_state_t s)
 
 	if (s->src && s->src_fd == -2)
 	{
-		// on macOS, depending on if the the COPYFILE_NOFOLLOW_SRC flag is set, either lstatx_np or statx_np will be called instead
+		// on macOS, depending on if the the COPYFILE_NOFOLLOW_SRC flag is set, either lstatx_np or statx_np is called
 		// but aquaBSD doesn't have such functions in its standard library, so I'll have to come back to this and rewrite copyfile_open "properly"
 
 		if (stat(s->src, &s->sb) < 0) {

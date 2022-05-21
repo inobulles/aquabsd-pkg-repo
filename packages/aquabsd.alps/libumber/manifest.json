@@ -1,0 +1,14 @@
+{
+	"name": "libumber",
+	"origin": "aquabsd.alps/libumber",
+	"version": "0522a",
+	"comment": "Logging library for everything in the AQUA ecosystem",
+	"maintainer": "obiwac@gmail.com",
+	"www": "https://github.com/inobulles/umber",
+	"desc": "Fuller documentation can be found in the IAR GitHub repository's `README.md` file.\n\nWWW: https://github.com/inobulles/umber",
+	"arch": "amd64",
+	"prefix": "/usr/",
+	"categories": [
+		"aquabsd.alps"
+	]
+}
