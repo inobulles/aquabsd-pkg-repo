@@ -21,7 +21,7 @@ mkdir -p $BUILD_DIR/package/usr/
 
 	# move built files to their appropriate place in the package
 
-	mv umber/bin/libumber.a package/usr/lib/libumber.a
+	mv umber/bin/libumber.a  package/usr/lib/libumber.a
 	mv umber/bin/libumber.so package/usr/lib/libumber.so
 )
 
