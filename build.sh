@@ -47,7 +47,7 @@ while test $# -gt 0; do
 						make missing | xargs pkg install -y
 					fi
 
-					make package BATCH=
+					make -j$(sysctl -n hw.ncpu) package BATCH=
 
 					if [ $(id -u) = 0 ]; then
 						pkg install -y work/pkg/*.pkg
