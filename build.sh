@@ -42,9 +42,10 @@ while test $# -gt 0; do
 					mv *.pkg $BUILD_DIR
 				elif [ -f Makefile ]; then
 					make clean
+					make missing
 
 					if [ $(id -u) = 0 ]; then
-						make build-depends-list | cut -c12- | xargs pkg install -y
+						make missing | xargs pkg install -y
 					fi
 
 					make -j$(sysctl -n hw.ncpu) package BATCH=
