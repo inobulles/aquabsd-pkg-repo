@@ -2,7 +2,7 @@ compute_engine_instance:
   platform: freebsd
   image_project: freebsd-org-cloud-dev
   image: freebsd-13-0-release-amd64
-  cpu: 1
+  cpu: 8
   memory: 4G
 
 task:
@@ -18,7 +18,7 @@ task:
   - mkdir -p /usr/ports/Keywords
   - cp ci/*.ucl /usr/ports/Keywords
   install_script:
-  - pkg install -y pkgconf pango librsvg2-rust icu git-lite libxcb xcb-util xcb-util-wm xcb-util-image xcb libX11 mesa-libs glew libXcomposite libXfixes libXinerama # TODO what was glew for again?
+  - pkg install -y git-lite icu libcjson librsvg2-rust libxcb mesa-libs pango pkgconf xcb xcb-util xcb-util-image xcb-util-wm
   script:
   - sh build.sh aquabsd.alps nvidia
   post_script:
