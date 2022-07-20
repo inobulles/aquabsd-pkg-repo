@@ -2,7 +2,7 @@ freebsd_instance:
   image_family: freebsd-14-0-snap
   cpu: 8
   memory: 4G
-  disk: 40
+  disk: 80
 
 task:
   name: Test all packages in the PKG repository build
