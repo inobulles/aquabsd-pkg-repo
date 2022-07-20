@@ -44,7 +44,7 @@ while test $# -gt 0; do
 					make clean
 
 					if [ $(id -u) = 0 ]; then
-						make missing | xargs pkg install -y
+						make build-depends-list | cut -c12- | xargs pkg install -y
 					fi
 
 					make -j$(sysctl -n hw.ncpu) package BATCH=
