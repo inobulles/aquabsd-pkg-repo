@@ -1,5 +1,3 @@
-# Created by: Stijn Hoop <stijn@win.tue.nl>
-# $FreeBSD$
 #
 # For those wondering why this port is not under `x11-drivers' category,
 # have a look at https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=121930.
@@ -9,6 +7,10 @@
 # you need to use legacy driver version and install one of corresponding
 # slave ports instead (`x11/nvidia-driver-390', `x11/nvidia-driver-340',
 # or `x11/nvidia-driver-304').
+#
+# To simplify testing of new feature branches and beta driver versions,
+# the port aims to support building against arbitrary DISTVERSION, i.e.
+# ``make DISTVERSION=xxx.yy.zz -DNO_CHECKSUM'' should typically work.
 
 PORTNAME?=	nvidia-driver
 DISTVERSION?=	515.57
@@ -29,28 +31,30 @@ LICENSE_FILE=	${WRKSRC}/doc/license.txt
 # obj/libEGL_nvidia.so.0 (see below)
 .if ${NVVERSION} >= 410.057
 PATCH_DEPENDS=	gsed:textproc/gsed
-BUILD_DEPENDS=	pkg-config:devel/pkgconf libglvnd>0:graphics/libglvnd
+BUILD_DEPENDS=	pkg-config:devel/pkgconf
+LIB_DEPENDS=	libOpenGL.so:graphics/libglvnd
 .endif
 
 USES=		kmod uidfix xorg
+.if ${NVVERSION} >= 470.04201
+USES+=		tar:xz
+.endif
 USE_XORG=	x11 xorg-server xext
 USE_LDCONFIG=	yes
 
-.if ${NVVERSION} >= 470
-USES+=		tar:xz
-.endif
-
-EGL_EP_JSON_PATH=	${PREFIX}/share/egl/egl_external_platform.d
+EGL_JSON_PATH=		${PREFIX}/share/egl/egl_external_platform.d
 GLVND_JSON_PATH=	${PREFIX}/share/glvnd/egl_vendor.d
-WAYLAND_JSON_PATH=	${PREFIX}/share/egl/egl_external_platform.d
 VKICD_PATH=		${PREFIX}/share/vulkan/icd.d
 VKLAYERS_PATH=		${PREFIX}/share/vulkan/implicit_layer.d
 MAKE_ENV=	DEBUG_FLAGS=${DEBUG_FLAGS} \
-		EGL_EXTERNAL_PLATFORM_JSON_PATH=${STAGEDIR}${EGL_EP_JSON_PATH} \
 		EGL_GLVND_JSON_PATH=${STAGEDIR}${GLVND_JSON_PATH} \
-		EGL_WAYLAND_JSON_PATH=${STAGEDIR}${WAYLAND_JSON_PATH} \
 		VKICD_PATH=${STAGEDIR}${VKICD_PATH} \
 		VKLAYERS_PATH=${STAGEDIR}${VKLAYERS_PATH}
+.if ${NVVERSION} < 495.02905
+MAKE_ENV+=	EGL_WAYLAND_JSON_PATH=${STAGEDIR}${EGL_JSON_PATH}
+.else
+MAKE_ENV+=	EGL_EXTERNAL_PLATFORM_JSON_PATH=${STAGEDIR}${EGL_JSON_PATH}
+.endif
 SUB_FILES=	pkg-message
 .if !defined(LIBGLDIR)
 SUB_FILES+=	nvidia.conf
@@ -60,16 +64,11 @@ SUB_FILES+=	pkg-deinstall pkg-install
 .endif
 SUB_PATCHES=	extra-patch-src-Makefile \
 		extra-patch-src-nv-freebsd.h
-.if ${NVVERSION} < 510
-SUB_PATCHES+= \
-	extra-patch-src-nvidia_ctl.c \
-	extra-patch-src-nvidia_dev.c \
-	extra-patch-src-nvidia_linux.c \
-	extra-patch-src-nvidia_pci.c
+.if ${NVVERSION} < 510.03901
+SUB_PATCHES+=	extra-patch-src-nvidia_dev.c \
+		extra-patch-src-nvidia_pci.c
 .endif
-.if ${NVVERSION} < 470
-SUB_PATCHES+=	extra-patch-src-nv-misc.h
-.endif
+
 DOCSDIR=	${PREFIX}/share/doc/NVIDIA_GLX-1.0
 MODULESDIR=	lib/xorg/modules
 EXTENSIONSDIR?=	${MODULESDIR}/extensions/.nvidia
@@ -87,11 +86,19 @@ NVSRC=		.
 NVSRC=		nvidia
 .endif
 
-.if ${NVVERSION} >= 358.009 && ${NVVERSION} < 510
-# Initialize memory allocations to avoid spurious "lock re-initialization"
-# errors.  A little more detail can be found in bug 201340 starting around
-# comment #50.
-SUB_PATCHES+=	extra-patch-src_nvidia-modeset_nvidia-modeset-freebsd.c
+.if ${NVVERSION} < 460.039
+.  if ${NVVERSION} >= 358.009
+EXTRA_PATCHES+=	${FILESDIR}/extra-patch-src_nvidia-modeset_nvidia-modeset-freebsd.c
+.  endif
+SUB_PATCHES+=	extra-patch-src-nvidia_ctl.c \
+		extra-patch-src-nvidia_linux.c
+.elif ${NVVERSION} < 510.03901
+EXTRA_PATCHES+=	${FILESDIR}/460-patch-src-nvidia-nvidia_ctl.c \
+		${FILESDIR}/460-patch-src-nvidia-nvidia_linux.c \
+		${FILESDIR}/460-patch-src_nvidia-modeset_nvidia-modeset-freebsd.c
+.endif
+.if ${NVVERSION} < 470.04201
+SUB_PATCHES+=	extra-patch-src-nv-misc.h
 .endif
 
 OPTIONS_DEFINE=	ACPI_PM LINUX WBINVD DOCS
@@ -120,6 +127,7 @@ PLIST_SUB+=	LIBGLDIR=${LIBGLDIR} LIBGLMAP="@comment "
 PLIST_SUB+=	LIBGLDIR="@comment " LIBGLMAP=""
 .endif
 
+CONFLICTS_INSTALL+=	nvidia-driver nvidia-driver-*
 .if ${PORTNAME} != nvidia-secondary-driver
 CONFLICTS_INSTALL+=	nvidia-secondary-driver
 .endif
@@ -129,16 +137,6 @@ CONFLICTS_INSTALL+=	nvidia-secondary-driver
 pre-patch:
 .for p in ${SUB_PATCHES}
 	@${SED} 's/%%NVSRC%%/${NVSRC}/g' ${PATCHDIR}/${p}.in > ${WRKDIR}/${p}
-.  if ${NVVERSION} >= 455.02304
-	@${REINPLACE_CMD} -e '/%%<  455.023%%/d' -e 's/%%>= 455.023%%//' ${WRKDIR}/${p}
-.  else
-	@${REINPLACE_CMD} -e '/%%>= 455.023%%/d' -e 's/%%<  455.023%%//' ${WRKDIR}/${p}
-.  endif
-.  if ${NVVERSION} >= 450.051
-	@${REINPLACE_CMD} -e '/%%<  450.051%%/d' -e 's/%%>= 450.051%%//' ${WRKDIR}/${p}
-.  else
-	@${REINPLACE_CMD} -e '/%%>= 450.051%%/d' -e 's/%%<  450.051%%//' ${WRKDIR}/${p}
-.  endif
 .endfor
 .for p in ${SUB_PATCHES}
 EXTRA_PATCHES+=	${WRKDIR}/${p}
@@ -146,7 +144,7 @@ EXTRA_PATCHES+=	${WRKDIR}/${p}
 
 post-patch: .SILENT
 # We should support -CURRENT: kill the check (first #if __FreeBSD_version)
-	linenum=$$(${SED} -ne '/^#if __FreeBSD_version/ {=; q;}' \
+	linenum=$$(${SED} -ne '/^#if __FreeBSD_version/ { = ; q ; }' \
 		${WRKSRC}/src/${NVSRC}/nv-freebsd.h) ; ${REINPLACE_CMD} \
 		-e "$$linenum,+2d" ${WRKSRC}/src/${NVSRC}/nv-freebsd.h
 # Adjust Linux headers #include's after FreeBSD src r246085
@@ -154,29 +152,30 @@ post-patch: .SILENT
 		{ x ; s/.*/#include "machine\/..\/..\/compat\/linux\/linux_ioctl.h"/ ; H ; x ; }' \
 			${WRKSRC}/src/${NVSRC}/nvidia_linux.c
 # Fix bogus memset() call
-.if ${NVVERSION} < 465.01901 # ?
 	${REINPLACE_CMD} -e '/memset/s/sizeof(ci/sizeof(*ci/' \
 		${WRKSRC}/src/${NVSRC}/nvidia_subr.c
-.endif
 # Chase `sys/capability.h' rename to `sys/capsicum.h' in FreeBSD src r263232
-.if ${NVVERSION} < 465.01901 # ?
 	${REINPLACE_CMD} -e 's:sys/capability\.h:sys/capsicum.h:' \
 		${WRKSRC}/src/${NVSRC}/nv-freebsd.h
-.endif
 .if ${NVVERSION} >= 358.009
 	${REINPLACE_CMD} -e 's:sys/capability\.h:sys/capsicum.h:' \
 		${WRKSRC}/src/nvidia-modeset/nvidia-modeset-freebsd.c
 .endif
 # KPI of kmem_alloc_contig(),kmem_free() changed in FreeBSD src r338143,r338318
-.if ${OSVERSION} >= 1200079 && ${NVVERSION} < 465.01901 # ?
 	${REINPLACE_CMD} \
 	    -e 's/kmem_alloc_contig(kmem_arena, /kmem_alloc_contig(/' \
 	    -e 's/kmem_free(kmem_arena, /kmem_free(/' \
 		${WRKSRC}/src/${NVSRC}/nvidia_subr.c
-.endif
 # Pull the right header after FreeBSD src r347984
 .if ${OSVERSION} >= 1300029 && ${NVVERSION} >= 358.009
 	${REINPLACE_CMD} -e '/^#include/s:lock\.h:mutex.h:' \
+		${WRKSRC}/src/nvidia-modeset/nvidia-modeset-freebsd.c
+.endif
+# After src df38ada2931f, `sys/module.h' must be included after `sys/param.h'
+.if ${NVVERSION} >= 358.009
+	@${REINPLACE_CMD} -e '/^#include <sys\/param\.h>/d; \
+		/^#include <sys\/module\.h>/ { x; \
+		s:^:#include <sys/param.h>:; G; }' \
 		${WRKSRC}/src/nvidia-modeset/nvidia-modeset-freebsd.c
 .endif
 # Disable installation of Linux libraries (provided by the corresponding
@@ -223,8 +222,13 @@ post-patch: .SILENT
 .endif
 .if ${NVVERSION} >= 415.013
 	prefix="${PREFIX}" ; padding=$$(($${#prefix}+3)) ; \
-	gsed ${REINPLACE_ARGS} -E "s,/etc/egl/egl_external_platform\.d.{$$padding},${WAYLAND_JSON_PATH}\x00," \
+	gsed ${REINPLACE_ARGS} -E "s,/etc/egl/egl_external_platform\.d.{$$padding},${EGL_JSON_PATH}\x00," \
 		${WRKSRC}/obj/libEGL_nvidia.so.0
+.endif
+# Unbreak the build against -Werror,-Wunused-but-set-variable CFLAGS
+.if ${NVVERSION} < 450.51
+	${REINPLACE_CMD} -e '/void nvidia_dev_dtor/,+8s,.*status.*,,' \
+		${WRKSRC}/src/${NVSRC}/nvidia_dev.c
 .endif
 # Finally, process OPTIONS
 .if ${PORT_OPTIONS:MFREEBSD_AGP}
@@ -264,6 +268,10 @@ post-install: .SILENT
 	${INSTALL_SCRIPT} ${WRKSRC}/obj/nvidia-bug-report.sh \
 		${STAGEDIR}${PREFIX}/bin
 # pkg-plist is already overbloated, so use these hacks instead of PLIST_SUB's
+.if ${NVVERSION:R} < 460
+	${REINPLACE_CMD} -e '/libnvidia-glvkspirv\.so/d ; \
+		/nvidia_icd\.json/d ; /nvidia_layers\.json/d' ${TMPPLIST}
+.endif
 .if ${NVVERSION} >= 304.128 && ${NVVERSION} < 310.019 || ${NVVERSION} >= 361.016
 	${REINPLACE_CMD} -E '/libvdpau(_trace)?\.so/d' ${TMPPLIST}
 .endif
@@ -297,12 +305,15 @@ post-install: .SILENT
 .endif
 .if ${NVVERSION} < 440.036
 	${REINPLACE_CMD} -e '/lib32\//d' ${TMPPLIST}
-.endif
-.if ${NVVERSION} < 465.01901
-	${REINPLACE_CMD} -e '/glvkspirv/d' -e '/vulkan/d' ${TMPPLIST}
+.elif ${NVVERSION} < 465.01901
+	${REINPLACE_CMD} -e '/lib32\/libnvidia-glvkspirv\.so/d' ${TMPPLIST}
 .endif
 .if ${NVVERSION} < 470.074
 	${REINPLACE_CMD} -e '/libnvidia-vulkan-producer\.so/d' ${TMPPLIST}
+.endif
+.if ${NVVERSION} < 495.02905
+	${REINPLACE_CMD} -e '/libnvidia-egl-gbm\.so/d ; \
+		/15_nvidia_gbm\.json/d' ${TMPPLIST}
 .endif
 .if ${NVVERSION} < 410.057
 # Rename some libraries and install a libmap file to resolve conflict with
