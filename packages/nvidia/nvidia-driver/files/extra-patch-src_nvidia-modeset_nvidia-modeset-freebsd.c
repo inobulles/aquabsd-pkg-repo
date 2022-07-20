@@ -1,16 +1,5 @@
 --- src/nvidia-modeset/nvidia-modeset-freebsd.c.orig	2018-08-21 23:09:28 UTC
 +++ src/nvidia-modeset/nvidia-modeset-freebsd.c
-@@ -9,9 +9,9 @@
-  */
-
- #include <sys/types.h>
-+#include <sys/param.h>
- #include <sys/module.h>
- #include <sys/errno.h>
--#include <sys/param.h>
- #include <sys/kernel.h>
- #include <sys/malloc.h>
- #include <sys/ioccom.h>
 @@ -25,6 +25,7 @@
  #include <sys/poll.h>
  #include <sys/file.h>
