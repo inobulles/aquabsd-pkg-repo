@@ -1,5 +1,5 @@
---- src/%%NVSRC%%/nvidia_ctl.c.orig	2017-09-14 20:46:30 UTC
-+++ src/%%NVSRC%%/nvidia_ctl.c
+--- src/nvidia/nvidia_ctl.c.orig	2021-01-21 21:50:34 UTC
++++ src/nvidia/nvidia_ctl.c
 @@ -13,6 +13,12 @@
  #include "nv.h"
  #include "nv-freebsd.h"
@@ -13,21 +13,6 @@
  static d_open_t  nvidia_ctl_open;
  static void nvidia_ctl_dtor(void *arg);
  static d_ioctl_t nvidia_ctl_ioctl;
-@@ -65,13 +71,12 @@ static int nvidia_ctl_open(
- 
- void nvidia_ctl_dtor(void *arg)
- {
--    int status;
-     struct nvidia_filep *filep = arg;
-     struct nvidia_event *et;
-     nv_state_t *nv = filep->nv;
- 
-     nv_lock_api(nv);
--    status = nvidia_close_ctl(nv, filep);
-+    nvidia_close_ctl(nv, filep);
-     nv_unlock_api(nv);
- 
-     while ((et = STAILQ_FIRST(&filep->event_queue))) {
 @@ -138,6 +144,18 @@ static int nvidia_ctl_poll(
  
  int nvidia_ctl_attach(void)
@@ -58,13 +43,10 @@
      }
  
      nvidia_count++;
-@@ -153,13 +175,25 @@ int nvidia_ctl_attach(void)
+@@ -153,10 +175,25 @@ int nvidia_ctl_attach(void)
  
  int nvidia_ctl_detach(void)
  {
--    struct nvidia_softc *sc;
--
--    sc = &nvidia_ctl_sc;
 +#ifdef NV_SUPPORT_LINUX_COMPAT
 +    struct linux_device_handler nvidia_ctl_linux_handler = {
 +        .bsd_driver_name = __DECONST(char *, nvidia_driver_name),
