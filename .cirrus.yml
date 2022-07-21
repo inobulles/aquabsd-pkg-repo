@@ -25,6 +25,7 @@ task:
     populate_script:
       - pkg install -y git-lite icu libcjson librsvg2-rust libxcb mesa-libs pango pkgconf xcb xcb-util xcb-util-image xcb-util-wm
       - MISSING=true sh build.sh aquabsd.alps nvidia
+      - pkg remove -y texlive-texmf # remove unnecessary fat packages (still can't for the life of me find what's depending on it)
   script:
     - sh build.sh aquabsd.alps nvidia
   post_script:

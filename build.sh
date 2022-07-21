@@ -26,13 +26,13 @@ while test $# -gt 0; do
 	echo "Building packages from the '$1' category ..."
 
 	( cd $category
-		if [ $MISSING = true ]; then
+		if [ "$MISSING" = true ]; then
 			# install missing dependencies
 			# do this before compiling any of them in order to not confuse pkg with installed ports
 			# ideally this'd happen for all categories, but eeeeh I'm not paid for this
 
 			for package in $(cat order); do
-				echo -e "\tInstalling missing dependencies for '$category/$package' ..."
+				echo -e "Installing missing dependencies for '$category/$package' ..."
 
 				( cd $package
 					if [ ! -f build.sh ] && [ -f Makefile ] && [ $(id -u) = 0 ]; then
@@ -46,7 +46,7 @@ while test $# -gt 0; do
 			# compile packages in the right order (some depend on others, and a proper dependcy system would be a tad too complicated)
 
 			for package in $(cat order); do
-				echo -e "\tBuilding '$category/$package' ..."
+				echo -e "Building '$category/$package' ..."
 
 				( cd $package
 					if [ -f build.sh ]; then
