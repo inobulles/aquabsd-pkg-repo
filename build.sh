@@ -26,49 +26,52 @@ while test $# -gt 0; do
 	echo "Building packages from the '$1' category ..."
 
 	( cd $category
-		# install missing dependencies
-		# do this before compiling any of them in order to not confuse pkg with installed ports
-		# ideally this'd happen for all categories, but eeeeh I'm not paid for this
+		if [ $MISSING = true ]; then
+			# install missing dependencies
+			# do this before compiling any of them in order to not confuse pkg with installed ports
+			# ideally this'd happen for all categories, but eeeeh I'm not paid for this
 
-		for package in $(cat order); do
-			echo -e "\tInstalling missing dependencies for '$category/$package' ..."
+			for package in $(cat order); do
+				echo -e "\tInstalling missing dependencies for '$category/$package' ..."
 
-			( cd $package
-				if [ ! -f build.sh ] && [ -f Makefile ] && [ $(id -u) = 0 ]; then
-					make missing
-					make missing | xargs pkg install -y
-				fi
-			)
-		done
-
-		# compile packages in the right order (some depend on others, and a proper dependcy system would be a tad too complicated)
-
-		for package in $(cat order); do
-			echo -e "\tBuilding '$category/$package' ..."
-
-			( cd $package
-				if [ -f build.sh ]; then
-					sh build.sh
-
-					if [ $(id -u) = 0 ]; then
-						pkg install -y *.pkg
+				( cd $package
+					if [ ! -f build.sh ] && [ -f Makefile ] && [ $(id -u) = 0 ]; then
+						make missing
+						make missing | xargs pkg install -y
 					fi
+				)
+			done
 
-					mv *.pkg $BUILD_DIR
-				elif [ -f Makefile ]; then
-					make clean
-					make -j$(sysctl -n hw.ncpu) package BATCH=
+		else
+			# compile packages in the right order (some depend on others, and a proper dependcy system would be a tad too complicated)
 
-					if [ $(id -u) = 0 ]; then
-						pkg install -y work/pkg/*.pkg
+			for package in $(cat order); do
+				echo -e "\tBuilding '$category/$package' ..."
+
+				( cd $package
+					if [ -f build.sh ]; then
+						sh build.sh
+
+						if [ $(id -u) = 0 ]; then
+							pkg install -y *.pkg
+						fi
+
+						mv *.pkg $BUILD_DIR
+					elif [ -f Makefile ]; then
+						make clean
+						make -j$(sysctl -n hw.ncpu) package BATCH=
+
+						if [ $(id -u) = 0 ]; then
+							pkg install -y work/pkg/*.pkg
+						fi
+
+						mv work/pkg/*.pkg $BUILD_DIR
+					else
+						echo -e "\tDon't know how to build $package 😢"
 					fi
-
-					mv work/pkg/*.pkg $BUILD_DIR
-				else
-					echo -e "\tDon't know how to build $package 😢"
-				fi
-			)
-		done
+				)
+			done
+		fi
 	)
 
 	shift

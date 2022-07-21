@@ -6,34 +6,29 @@ freebsd_instance:
 
 task:
   name: Test all packages in the PKG repository build
+  setup_script:
+    - uname -a
+    - df -h
+    - echo "Add Linux support to kernel 🐧"
+    - kldload linux64
+    - kldstat
+    - mkdir -p /usr/local/etc/pkg/repos
+    - cp ci/FreeBSD.conf /usr/local/etc/pkg/repos
+    - mkdir -p /usr/ports/Keywords
+    - cp ci/*.ucl /usr/ports/Keywords
   pkg_cache:
     folder: /var/cache/pkg
     reupload_on_changes: false
     fingerprint_script:
       - uname -a
       - pkg info
-  distfiles_cache:
-    folder: /usr/ports/distfiles
-    reupload_on_changes: false
-    fingerprint_script:
-      - uname -a
-      - ls /usr/ports/distfiles
-  setup_script:
-  - uname -a
-  - df -h
-  - echo "Add Linux support to kernel 🐧"
-  - kldload linux64
-  - kldstat
-  - mkdir -p /usr/local/etc/pkg/repos
-  - cp ci/FreeBSD.conf /usr/local/etc/pkg/repos
-  - mkdir -p /usr/ports/Keywords
-  - cp ci/*.ucl /usr/ports/Keywords
-  install_script:
-  - pkg install -y git-lite icu libcjson librsvg2-rust libxcb mesa-libs pango pkgconf xcb xcb-util xcb-util-image xcb-util-wm
+    populate_script:
+      - pkg install -y git-lite icu libcjson librsvg2-rust libxcb mesa-libs pango pkgconf xcb xcb-util xcb-util-image xcb-util-wm
+      - MISSING=true sh build.sh aquabsd.alps nvidia
   script:
-  - sh build.sh aquabsd.alps nvidia
+    - sh build.sh aquabsd.alps nvidia
   post_script:
-  - ls -la .build/
-  - df -h
+    - ls -la .build/
+    - df -h
   packages_artifacts:
     path: ".build/*"
