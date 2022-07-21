@@ -35,6 +35,7 @@ while test $# -gt 0; do
 
 			( cd $package
 				if [ ! -f build.sh ] && [ -f Makefile ] && [ $(id -u) = 0 ]; then
+					make missing
 					make missing | xargs pkg install -y
 				fi
 			)
