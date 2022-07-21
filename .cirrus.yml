@@ -21,7 +21,6 @@ task:
     reupload_on_changes: false
     fingerprint_script:
       - uname -a
-      - pkg info
     populate_script:
       - pkg install -y git-lite icu libcjson librsvg2-rust libxcb mesa-libs pango pkgconf xcb xcb-util xcb-util-image xcb-util-wm
       - MISSING=true sh build.sh aquabsd.alps nvidia
