@@ -2,10 +2,22 @@ freebsd_instance:
   image_family: freebsd-14-0-snap
   cpu: 8
   memory: 8G
-  disk: 200
+  disk: 40
 
 task:
   name: Test all packages in the PKG repository build
+  pkg_cache:
+    folder: /var/cache/pkg
+    reupload_on_changes: false
+    fingerprint_script:
+      - uname -a
+      - pkg info
+  distfiles_cache:
+    folder: /usr/ports/distfiles
+    reupload_on_changes: false
+    fingerprint_script:
+      - uname -a
+      - ls /usr/ports/distfiles
   setup_script:
   - uname -a
   - df -h
