@@ -1,7 +1,7 @@
 {
 	"name": "libsettings",
 	"origin": "aquabsd.alps/libsettings",
-	"version": "0322a",
+	"version": "0722a",
 	"comment": "Library for managing various system settings",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/aquabsd-pkg-repo",

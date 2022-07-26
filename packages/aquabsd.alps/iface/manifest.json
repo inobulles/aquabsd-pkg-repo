@@ -1,7 +1,7 @@
 {
 	"name": "iface",
 	"origin": "aquabsd.alps/iface",
-	"version": "0222a",
+	"version": "0722a",
 	"comment": "Command-line utility for network interface configuration",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/aquabsd-core",
@@ -13,7 +13,7 @@
 	],
 	"deps": {
 		"libiface": {
-			"version": "0222a",
+			"version": "0722a",
 			"origin": "aquabsd.alps/libiface"
 		}
 	}

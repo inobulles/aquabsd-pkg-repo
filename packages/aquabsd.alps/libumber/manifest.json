@@ -1,7 +1,7 @@
 {
 	"name": "libumber",
 	"origin": "aquabsd.alps/libumber",
-	"version": "0522a",
+	"version": "0722a",
 	"comment": "Logging library for everything in the AQUA ecosystem",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/umber",

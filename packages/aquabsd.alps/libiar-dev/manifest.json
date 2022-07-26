@@ -1,7 +1,7 @@
 {
 	"name": "libiar-dev",
 	"origin": "aquabsd.alps/libiar-dev",
-	"version": "0222a",
+	"version": "0722a",
 	"comment": "Development headers for libiar",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/iar",

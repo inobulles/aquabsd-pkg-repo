@@ -1,7 +1,7 @@
 {
 	"name": "libmkfs_msdos",
 	"origin": "aquabsd.alps/libmkfs_msdos",
-	"version": "0222a",
+	"version": "0722a",
 	"comment": "Library for creating MS-DOS filesystems",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/aquabsd-core/tree/main/sbin/newfs_msdos",

@@ -1,7 +1,7 @@
 {
 	"name": "iar",
 	"origin": "aquabsd.alps/iar",
-	"version": "0222a",
+	"version": "0722a",
 	"comment": "Command-line utility for managing IAR (Inobulles ARchive) files",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/iar",
@@ -13,7 +13,7 @@
 	],
 	"deps": {
 		"libiar": {
-			"version": "0222a",
+			"version": "0722a",
 			"origin": "aquabsd.alps/libiar"
 		}
 	}

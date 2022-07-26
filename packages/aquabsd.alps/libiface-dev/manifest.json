@@ -1,7 +1,7 @@
 {
 	"name": "libiface-dev",
 	"origin": "aquabsd.alps/libiface-dev",
-	"version": "0222a",
+	"version": "0722a",
 	"comment": "Development headers for libiface",
 	"maintainer": "obiwac@gmail.com",
 	"www": "https://github.com/inobulles/aquabsd-pkg-repo",
